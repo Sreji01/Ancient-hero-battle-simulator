@@ -28,15 +28,19 @@
                       (Integer/parseInt input-str)
                       (catch NumberFormatException _
                         nil))]
+      (if (nil? input)
+        (do
+          (println "Invalid input. Please enter a number.")
+          (recur))
         (if-let [hero (first (filter #(= (:id %) input) heroes/heroes))]
           (do
             (println (str (:name hero) " selected!"))
             hero)
           (do
             (println "Hero not found. Try again.")
-            (recur))))))
+            (recur)))))))
 
-(defn fight [blue-hero red-hero]
+(defn fight [blue red]
   (println "Fight!"))
 
 (defn select-1v1 []
@@ -46,14 +50,34 @@
         red-hero  (select-hero "Red" 1)]
     (fight blue-hero red-hero)))
 
+(defn select-2v2 []
+  (println "\n--- 2v2 Combat ---")
+  (list-heroes)
+  (let [blue-team [(select-hero "Blue" 1)
+                   (select-hero "Blue" 2)]
+        red-team  [(select-hero "Red" 1)
+                   (select-hero "Red" 2)]]
+    (fight blue-team red-team)))
+
+(defn select-3v3 []
+  (println "\n--- 3v3 Combat ---")
+  (list-heroes)
+  (let [blue-team [(select-hero "BLUE" 1)
+                   (select-hero "BLUE" 2)
+                   (select-hero "BLUE" 3)]
+        red-team  [(select-hero "RED" 1)
+                   (select-hero "RED" 2)
+                   (select-hero "RED" 3)]]
+    (fight blue-team red-team)))
+
 (defn select-combat []
   (loop []
     (show-combat-menu)
     (let [choice (read-line)]
       (case choice
         "1" (do (select-1v1) (recur))
-        "2" (do (println "You chose 2v2!") (recur))
-        "3" (do (println "You chose 3v3!") (recur))
+        "2" (do (select-2v2) (recur))
+        "3" (do (select-3v3) (recur))
         "4" (println "Returning to main menu...")
         (do (println "Invalid choice") (recur))))))
 
