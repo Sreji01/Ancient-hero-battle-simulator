@@ -21,53 +21,24 @@
   (println "4. Back to main menu"))
 
 (defn select-hero [team hero-number]
-  (println (str "\nSelect " team " team hero " hero-number " (enter number):"))
+  (println (format "\nSelect %s team hero %d (enter number):" team hero-number))
   (loop []
-    (let [input-str (read-line)
-          input     (try
-                      (Integer/parseInt input-str)
-                      (catch NumberFormatException _
-                        nil))]
-      (if (nil? input)
-        (do
-          (println "Invalid input. Please enter a number.")
-          (recur))
-        (if-let [hero (first (filter #(= (:id %) input) heroes/heroes))]
-          (do
-            (println (str (:name hero) " selected!"))
-            hero)
-          (do
-            (println "Hero not found. Try again.")
-            (recur)))))))
+    (if-let [id (try (Integer/parseInt (read-line))
+                     (catch NumberFormatException _ nil))]
+      (if-let [hero (some #(and (= (:id %) id) %) heroes/heroes)]
+        (do (println (str (:name hero) " selected!")) hero)
+        (do (println "Hero not found.") (recur)))
+      (do (println "Invalid input.") (recur)))))
+
 
 (defn fight [blue red]
   (println "Fight!"))
 
-(defn select-1v1 []
-  (println "\n--- 1v1 Combat ---")
+(defn select-nvn [n]
+  (println (format "\n--- %dv%d Combat ---" n n))
   (list-heroes)
-  (let [blue-hero (select-hero "Blue" 1)
-        red-hero  (select-hero "Red" 1)]
-    (fight blue-hero red-hero)))
-
-(defn select-2v2 []
-  (println "\n--- 2v2 Combat ---")
-  (list-heroes)
-  (let [blue-team [(select-hero "Blue" 1)
-                   (select-hero "Blue" 2)]
-        red-team  [(select-hero "Red" 1)
-                   (select-hero "Red" 2)]]
-    (fight blue-team red-team)))
-
-(defn select-3v3 []
-  (println "\n--- 3v3 Combat ---")
-  (list-heroes)
-  (let [blue-team [(select-hero "BLUE" 1)
-                   (select-hero "BLUE" 2)
-                   (select-hero "BLUE" 3)]
-        red-team  [(select-hero "RED" 1)
-                   (select-hero "RED" 2)
-                   (select-hero "RED" 3)]]
+  (let [blue-team (mapv #(select-hero "Blue" %) (range 1 (inc n)))
+        red-team  (mapv #(select-hero "Red" %)  (range 1 (inc 2)))]
     (fight blue-team red-team)))
 
 (defn select-combat []
@@ -75,9 +46,9 @@
     (show-combat-menu)
     (let [choice (read-line)]
       (case choice
-        "1" (do (select-1v1) (recur))
-        "2" (do (select-2v2) (recur))
-        "3" (do (select-3v3) (recur))
+        "1" (do (select-nvn 1) (recur))
+        "2" (do (select-nvn 2) (recur))
+        "3" (do (select-nvn 3) (recur))
         "4" (println "Returning to main menu...")
         (do (println "Invalid choice") (recur))))))
 
