@@ -18,10 +18,10 @@
   (println "1. 1v1")
   (println "2. 2v2")
   (println "3. 3v3")
-  
+
   (println "4. Back to main menu"))
 
-(defn select-hero [team hero-number selected-heroes] 
+(defn select-hero [team hero-number selected-heroes]
   (loop []
     (println (format "\nSelect %s team hero %d (enter number):" team hero-number))
     (if-let [id (try (Integer/parseInt (read-line))
@@ -33,7 +33,7 @@
             (recur))
           (do
             (println (str (:name hero) " selected!"))
-            (swap! selected-heroes conj id) 
+            (swap! selected-heroes conj id)
             hero))
         (do
           (println "Hero not found.")
@@ -53,29 +53,50 @@
       (do (println "Invalid input.") (recur)))))
 
 (defn choose-combatants [blue-team red-team]
-   (println "\nBlue Team:")
-   (doseq [[id hero] (map-indexed vector blue-team)]
-     (println (str (inc id) ". " (:name hero))))
-   (let [attacker (choose-hero blue-team "Blue")]
-     (println (:name attacker) " selected!")
+  (println "\nBlue Team:")
+  (doseq [[id hero] (map-indexed vector blue-team)]
+    (println (str (inc id) ". " (:name hero))))
+  (let [attacker (choose-hero blue-team "Blue")]
+    (println (:name attacker) " selected to attack!")
 
-     (println "\nRed Team:")
-     (doseq [[id hero] (map-indexed vector red-team)]
-       (println (str (inc id) ". " (:name hero))))
-     (let [defender (choose-hero red-team "Red")]
-       (println (:name defender) " selected!")
-       [attacker defender])))
+    (println "\nRed Team:")
+    (doseq [[id hero] (map-indexed vector red-team)]
+      (println (str (inc id) ". " (:name hero))))
+    (let [defender (choose-hero red-team "Red")]
+      (println (:name defender) " selected as target!")
+      [attacker defender])))
+
+(defn attack [attacker defender]
+  (Thread/sleep 2000)
+
+  (println (str "\n" (:name attacker) " attacks " (:name defender) "!")))
+
+(defn random-hero [team]
+  (rand-nth team))
+
+(defn enemy-attack [blue-team red-team]
+  (let [attacker (random-hero red-team)
+        defender (random-hero blue-team)]
+    (println "\n[Enemy turn!]")
+    (Thread/sleep 2000)
+    (println (:name attacker) "selected to attack!")
+    (Thread/sleep 2000)
+    (println (:name defender) "selected as target!")
+    (Thread/sleep 2000)
+    (println (str "\n" (:name attacker) " attacks " (:name defender) "!"))
+    ))
 
 (defn fight [blue-team red-team]
   (let [[attacker defender] (choose-combatants blue-team red-team)]
-    (println (str "\n" (:name attacker) " attacks " (:name defender) "!"))))
+    (attack attacker defender)
+    (enemy-attack blue-team red-team)))
 
 (defn select-nvn [n]
   (println (format "\n--- %dv%d Combat ---" n n))
   (list-heroes)
   (let [selected-heroes (atom #{})
         blue-team (mapv #(select-hero "Blue" % selected-heroes) (range 1 (inc n)))
-        red-team  (mapv #(select-hero "Red" % selected-heroes)  (range 1 (inc 2)))]
+        red-team  (mapv #(select-hero "Red"  % selected-heroes) (range 1 (inc n)))]
     (fight blue-team red-team)))
 
 (defn select-combat []
