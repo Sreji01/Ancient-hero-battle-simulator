@@ -42,36 +42,33 @@
         (println "Invalid input.")
         (recur)))))
 
+(defn choose-hero [team team-name]
+  (println (str "\nSelect a hero from " team-name " Team to attack (enter number):"))
+  (loop []
+    (if-let [input (try (Integer/parseInt (read-line))
+                        (catch NumberFormatException _ nil))]
+      (if (and (>= input 1) (<= input (count team)))
+        (team (dec input))
+        (do (println "Invalid choice.") (recur)))
+      (do (println "Invalid input.") (recur)))))
+
+(defn choose-combatants [blue-team red-team]
+   (println "\nBlue Team:")
+   (doseq [[id hero] (map-indexed vector blue-team)]
+     (println (str (inc id) ". " (:name hero))))
+   (let [attacker (choose-hero blue-team "Blue")]
+     (println (:name attacker) " selected!")
+
+     (println "\nRed Team:")
+     (doseq [[id hero] (map-indexed vector red-team)]
+       (println (str (inc id) ". " (:name hero))))
+     (let [defender (choose-hero red-team "Red")]
+       (println (:name defender) " selected!")
+       [attacker defender])))
+
 (defn fight [blue-team red-team]
-  (println "\nBlue Team:") 
-  (doseq [[id hero] (map-indexed vector blue-team)]
-    (println (str (inc id) ". " (:name hero))))
-
-  (let [attacker (loop []
-                   (println "\nSelect a hero from Blue Team to attack (enter number):")
-                   (if-let [input (try (Integer/parseInt (read-line))
-                                        (catch NumberFormatException _ nil))]
-                     (if (and (>= input 1) (<= input (count blue-team)))
-                       (blue-team (dec input))
-                       (do (println "Invalid choice.") (recur)))
-                     (do (println "Invalid input.") (recur))))]
-    (println (:name attacker) " selected!")
-
-    (println "\nRed Team:")
-    (doseq [[id hero] (map-indexed vector red-team)]
-      (println (str (inc id) ". " (:name hero))))
-
-    (let [defender (loop []
-                     (println "\nSelect a hero from Red Team to attack (enter number):")
-                     (if-let [choice (try (Integer/parseInt (read-line))
-                                          (catch NumberFormatException _ nil))]
-                       (if (and (>= choice 1) (<= choice (count red-team)))
-                         (red-team (dec choice))
-                         (do (println "Invalid choice.") (recur)))
-                       (do (println "Invalid input.") (recur))))]
-      (println (:name defender) " selected!")
-
-      (println (str "\n" (:name attacker) " attacks " (:name defender) "!")))))
+  (let [[attacker defender] (choose-combatants blue-team red-team)]
+    (println (str "\n" (:name attacker) " attacks " (:name defender) "!"))))
 
 (defn select-nvn [n]
   (println (format "\n--- %dv%d Combat ---" n n))
