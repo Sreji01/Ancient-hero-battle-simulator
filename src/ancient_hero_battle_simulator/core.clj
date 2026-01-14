@@ -42,33 +42,29 @@
         (println "Invalid input.")
         (recur)))))
 
-(defn choose-hero [team team-name]
+
+(defn choose-hero [team team-name unavailable-heroes]
   (println (str "\nSelect a hero from " team-name " Team to attack (enter number):"))
-  (loop []
-    (if-let [input (try (Integer/parseInt (read-line))
-                        (catch NumberFormatException _ nil))]
-      (if (and (>= input 1) (<= input (count team)))
-        (team (dec input))
-        (do (println "Invalid choice.") (recur)))
-      (do (println "Invalid input.") (recur)))))
+  (let [available-team (vec (filter #(not (contains? @unavailable-heroes (:id %))) team))]
+    (loop []
+      (doseq [[id hero] (map-indexed vector available-team)]
+        (println (str (inc id) ". " (:name hero))))
+      (if-let [input (try (Integer/parseInt (read-line))
+                          (catch NumberFormatException _ nil))]
+        (if (and (>= input 1) (<= input (count available-team)))
+          (available-team (dec input))
+          (do (println "Invalid choice.") (recur)))
+        (do (println "Invalid input.") (recur))))))
 
-(defn choose-combatants [blue-team red-team]
-  (println "\nBlue Team:")
-  (doseq [[id hero] (map-indexed vector blue-team)]
-    (println (str (inc id) ". " (:name hero))))
-  (let [attacker (choose-hero blue-team "Blue")]
+(defn choose-combatants [blue-team red-team attacked-heroes defended-heroes]
+  (let [attacker (choose-hero blue-team "Blue" attacked-heroes)]
     (println (:name attacker) " selected to attack!")
-
-    (println "\nRed Team:")
-    (doseq [[id hero] (map-indexed vector red-team)]
-      (println (str (inc id) ". " (:name hero))))
-    (let [defender (choose-hero red-team "Red")]
+    (let [defender (choose-hero red-team "Red" defended-heroes)]
       (println (:name defender) " selected as target!")
       [attacker defender])))
 
 (defn attack [attacker defender]
   (Thread/sleep 2000)
-
   (println (str "\n" (:name attacker) " attacks " (:name defender) "!")))
 
 (defn random-hero [team]
@@ -87,9 +83,15 @@
     ))
 
 (defn fight [blue-team red-team]
-  (let [[attacker defender] (choose-combatants blue-team red-team)]
-    (attack attacker defender)
-    (enemy-attack blue-team red-team)))
+  (let [attacked-heroes (atom #{})
+        defended-heroes (atom #{})]
+    (while (or (< (count @attacked-heroes) (count blue-team))
+               (< (count @defended-heroes) (count red-team)))
+      (let [[attacker defender] (choose-combatants blue-team red-team attacked-heroes defended-heroes)]
+        (attack attacker defender)
+        (swap! attacked-heroes conj (:id attacker))
+        (swap! defended-heroes conj (:id defender))
+        (enemy-attack blue-team red-team)))))
 
 (defn select-nvn [n]
   (println (format "\n--- %dv%d Combat ---" n n))
