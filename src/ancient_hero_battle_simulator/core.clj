@@ -67,31 +67,33 @@
   (Thread/sleep 2000)
   (println (str "\n" (:name attacker) " attacks " (:name defender) "!")))
 
-(defn random-hero [team]
-  (rand-nth team))
-
-(defn enemy-attack [blue-team red-team]
-  (let [attacker (random-hero red-team)
-        defender (random-hero blue-team)]
+(defn enemy-attack [blue-team red-team attacked-heroes defended-heroes]
+  (let [available-red (vec (filter #(not (contains? @attacked-heroes (:id %))) red-team))
+        available-blue (vec (filter #(not (contains? @defended-heroes (:id %))) blue-team))
+        attacker (rand-nth available-red)
+        defender (rand-nth available-blue)]
     (println "\n[Enemy turn!]")
     (Thread/sleep 2000)
-    (println (:name attacker) "selected to attack!")
+    (println (:name attacker) " selected to attack!")
     (Thread/sleep 2000)
-    (println (:name defender) "selected as target!")
+    (println (:name defender) " selected as target!")
     (Thread/sleep 2000)
     (println (str "\n" (:name attacker) " attacks " (:name defender) "!"))
-    ))
+    (swap! attacked-heroes conj (:id attacker))
+    (swap! defended-heroes conj (:id defender))))
 
 (defn fight [blue-team red-team]
   (let [attacked-heroes (atom #{})
         defended-heroes (atom #{})]
-    (while (or (< (count @attacked-heroes) (count blue-team))
-               (< (count @defended-heroes) (count red-team)))
-      (let [[attacker defender] (choose-combatants blue-team red-team attacked-heroes defended-heroes)]
-        (attack attacker defender)
-        (swap! attacked-heroes conj (:id attacker))
-        (swap! defended-heroes conj (:id defender))
-        (enemy-attack blue-team red-team)))))
+    (loop []
+      (when (or (some #(not (contains? @attacked-heroes (:id %))) blue-team)
+                (some #(not (contains? @defended-heroes (:id %))) red-team))
+        (let [[attacker defender] (choose-combatants blue-team red-team attacked-heroes defended-heroes)]
+          (attack attacker defender)
+          (swap! attacked-heroes conj (:id attacker))
+          (swap! defended-heroes conj (:id defender))
+          (enemy-attack blue-team red-team attacked-heroes defended-heroes))
+        (recur)))))
 
 (defn select-nvn [n]
   (println (format "\n--- %dv%d Combat ---" n n))
