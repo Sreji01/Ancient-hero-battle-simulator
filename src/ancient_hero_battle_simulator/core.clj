@@ -65,7 +65,8 @@
 
 (defn attack [attacker defender]
   (Thread/sleep 2000)
-  (println (str "\n" (:name attacker) " attacks " (:name defender) "!")))
+  (println (str "\n" (:name attacker) " attacks " (:name defender) "!"))
+  (Thread/sleep 2000))
 
 (defn enemy-attack [blue-team red-team attacked-heroes defended-heroes]
   (let [available-red (vec (filter #(not (contains? @attacked-heroes (:id %))) red-team))
@@ -77,23 +78,27 @@
     (println (:name attacker) " selected to attack!")
     (Thread/sleep 2000)
     (println (:name defender) " selected as target!")
-    (Thread/sleep 2000)
-    (println (str "\n" (:name attacker) " attacks " (:name defender) "!"))
+    (attack attacker defender)
     (swap! attacked-heroes conj (:id attacker))
     (swap! defended-heroes conj (:id defender))))
 
 (defn fight [blue-team red-team]
-  (let [attacked-heroes (atom #{})
-        defended-heroes (atom #{})]
-    (loop []
-      (when (or (some #(not (contains? @attacked-heroes (:id %))) blue-team)
-                (some #(not (contains? @defended-heroes (:id %))) red-team))
-        (let [[attacker defender] (choose-combatants blue-team red-team attacked-heroes defended-heroes)]
-          (attack attacker defender)
-          (swap! attacked-heroes conj (:id attacker))
-          (swap! defended-heroes conj (:id defender))
-          (enemy-attack blue-team red-team attacked-heroes defended-heroes))
-        (recur)))))
+  (loop [round 1]
+    (println (str "\n=== ROUND " round " ==="))
+    (let [attacked-heroes (atom #{})
+          defended-heroes (atom #{})]
+      (loop []
+        (when (and
+               (some #(not (contains? @attacked-heroes (:id %))) blue-team)
+               (some #(not (contains? @defended-heroes (:id %))) red-team))
+          (let [[attacker defender]
+                (choose-combatants blue-team red-team attacked-heroes defended-heroes)]
+            (attack attacker defender)
+            (swap! attacked-heroes conj (:id attacker))
+            (swap! defended-heroes conj (:id defender))
+            (enemy-attack blue-team red-team attacked-heroes defended-heroes))
+          (recur))))
+    (recur (inc round))))
 
 (defn select-nvn [n]
   (println (format "\n--- %dv%d Combat ---" n n))
