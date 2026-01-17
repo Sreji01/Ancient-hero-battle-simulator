@@ -64,9 +64,29 @@
       [attacker defender])))
 
 (defn attack [attacker defender]
-  (Thread/sleep 2000)
-  (println (str "\n" (:name attacker) " attacks " (:name defender) "!"))
-  (Thread/sleep 2000))
+  (let [atk-stats (:stats attacker)
+        def-stats (:stats defender)
+        hit-chance (+ 60
+                      (* (- (:agility atk-stats) (:agility def-stats)) 0.8)
+                      (* (:intelligence atk-stats) 0.2))
+        roll (rand-int 100)]
+
+    (Thread/sleep 2000)
+
+    (println (str "\n" (:name attacker) " attacks " (:name defender) "!"))
+    (Thread/sleep 2000)
+
+    (if (> roll hit-chance)
+      (do
+        (println (str (:name defender) " dodged the attack!"))
+        (Thread/sleep 2000))
+      (let [raw-damage (* (:power atk-stats) (+ 0.5 (rand)))
+            reduction (* (:defense def-stats) 0.4)
+            damage (max 1 (- raw-damage reduction))]
+        (println "Hit!")
+        (Thread/sleep 2000)
+        (println (str (:name attacker) " deals " (int damage) " damage to " (:name defender) "!"))
+        (Thread/sleep 2000)))))
 
 (defn enemy-attack [blue-team red-team attacked-heroes defended-heroes]
   (let [available-red (vec (filter #(not (contains? @attacked-heroes (:id %))) red-team))
