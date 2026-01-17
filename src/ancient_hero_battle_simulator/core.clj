@@ -66,9 +66,10 @@
 (defn attack [attacker defender]
   (let [atk-stats (:stats attacker)
         def-stats (:stats defender)
-        hit-chance (+ 60
-                      (* (- (:agility atk-stats) (:agility def-stats)) 0.8)
-                      (* (:intelligence atk-stats) 0.2))
+
+        hit-chance (+ 70
+                      (* (- (:agility atk-stats) (:agility def-stats)) 0.3)
+                      (* (:intelligence atk-stats) 0.1))
         roll (rand-int 100)]
 
     (Thread/sleep 2000)
@@ -80,9 +81,10 @@
       (do
         (println (str (:name defender) " dodged the attack!"))
         (Thread/sleep 2000))
-      (let [raw-damage (* (:power atk-stats) (+ 0.5 (rand)))
-            reduction (* (:defense def-stats) 0.4)
+      (let [raw-damage (:power atk-stats)
+            reduction (* (:defense def-stats) 0.6)
             damage (max 1 (- raw-damage reduction))]
+
         (println "Hit!")
         (Thread/sleep 2000)
         (println (str (:name attacker) " deals " (int damage) " damage to " (:name defender) "!"))
