@@ -42,10 +42,15 @@
         (println "Invalid input.")
         (recur)))))
 
+(defn alive? [hero]
+  (pos? @(:current-hp hero)))
+
+(defn dead? [hero]
+  (zero? @(:current-hp hero)))
 
 (defn choose-hero [team team-name unavailable-heroes]
   (println (str "\nSelect a hero from " team-name " Team to attack (enter number):"))
-  (let [available-team (vec (filter #(not (contains? @unavailable-heroes (:id %))) team))]
+  (let [available-team (vec (filter #(and (alive? %) (not (contains? @unavailable-heroes (:id %)))) team))]
     (loop []
       (doseq [[id hero] (map-indexed vector available-team)]
         (println (str (inc id) ". " (:name hero) " " @(:current-hp hero) " HP")))
@@ -89,7 +94,10 @@
                #(max 0 (- % damage)))
 
         (println (str (:name attacker) " deals " damage " damage to " (:name defender) "!"))
-        (Thread/sleep 2000)))))
+        (Thread/sleep 2000)
+        
+        (when (dead? defender)
+          (println (str (:name defender) " has fallen!")))))))
 
 (defn enemy-attack [blue-team red-team attacked-heroes defended-heroes]
   (let [available-red (vec (filter #(not (contains? @attacked-heroes (:id %))) red-team))
@@ -105,21 +113,51 @@
     (swap! attacked-heroes conj (:id attacker))
     (swap! defended-heroes conj (:id defender))))
 
+
+
 (defn fight [blue-team red-team]
   (loop [round 1]
     (println (str "\n=== ROUND " round " ==="))
     (let [attacked-heroes (atom #{})
-          defended-heroes (atom #{})]
+          defended-heroes (atom #{})
+          dead-announced  (atom #{})]
+
       (loop []
         (when (and
-               (some #(not (contains? @attacked-heroes (:id %))) blue-team)
-               (some #(not (contains? @defended-heroes (:id %))) red-team))
+               (some #(and (alive? %)
+                           (not (contains? @attacked-heroes (:id %))))
+                     blue-team)
+               (some #(and (alive? %)
+                           (not (contains? @defended-heroes (:id %))))
+                     red-team))
+
+          ;; -------- PLAYER TURN --------
           (let [[attacker defender]
                 (choose-combatants blue-team red-team attacked-heroes defended-heroes)]
+
             (attack attacker defender)
+
             (swap! attacked-heroes conj (:id attacker))
             (swap! defended-heroes conj (:id defender))
-            (enemy-attack blue-team red-team attacked-heroes defended-heroes))
+
+            ;; Ako je defender umro I VEĆ JE NAPAO ove runde
+            (when (and (dead? defender)
+                       (contains? @attacked-heroes (:id defender))
+                       (not (contains? @dead-announced (:id defender))))
+              (println (str (:name defender) " is dead!"))
+              (swap! dead-announced conj (:id defender)))
+
+            ;; -------- ENEMY TURN --------
+            (enemy-attack blue-team red-team attacked-heroes defended-heroes)
+
+            ;; Proveri smrt posle enemy napada (za obe strane)
+            (doseq [hero (concat blue-team red-team)]
+              (when (and (dead? hero)
+                         (contains? @attacked-heroes (:id hero))
+                         (not (contains? @dead-announced (:id hero))))
+                (println (str (:name hero) " is dead!"))
+                (swap! dead-announced conj (:id hero)))))
+
           (recur))))
     (recur (inc round))))
 
