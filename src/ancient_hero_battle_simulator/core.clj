@@ -48,7 +48,7 @@
   (let [available-team (vec (filter #(not (contains? @unavailable-heroes (:id %))) team))]
     (loop []
       (doseq [[id hero] (map-indexed vector available-team)]
-        (println (str (inc id) ". " (:name hero))))
+        (println (str (inc id) ". " (:name hero) " " @(:current-hp hero) " HP")))
       (if-let [input (try (Integer/parseInt (read-line))
                           (catch NumberFormatException _ nil))]
         (if (and (>= input 1) (<= input (count available-team)))
@@ -83,11 +83,12 @@
         (Thread/sleep 2000))
       (let [raw-damage (:power atk-stats)
             reduction (* (:defense def-stats) 0.6)
-            damage (max 1 (- raw-damage reduction))]
+            damage (int (max 1 (- raw-damage reduction)))]
 
-        (println "Hit!")
-        (Thread/sleep 2000)
-        (println (str (:name attacker) " deals " (int damage) " damage to " (:name defender) "!"))
+        (swap! (:current-hp defender)
+               #(max 0 (- % damage)))
+
+        (println (str (:name attacker) " deals " damage " damage to " (:name defender) "!"))
         (Thread/sleep 2000)))))
 
 (defn enemy-attack [blue-team red-team attacked-heroes defended-heroes]
@@ -122,12 +123,17 @@
           (recur))))
     (recur (inc round))))
 
+(defn init-hero [hero]
+  (assoc hero :current-hp (atom (get-in hero [:stats :health]))))
+
 (defn select-nvn [n]
   (println (format "\n--- %dv%d Combat ---" n n))
   (list-heroes)
   (let [selected-heroes (atom #{})
-        blue-team (mapv #(select-hero "Blue" % selected-heroes) (range 1 (inc n)))
-        red-team  (mapv #(select-hero "Red"  % selected-heroes) (range 1 (inc n)))]
+        blue-team (mapv #(init-hero (select-hero "Blue" % selected-heroes))
+                        (range 1 (inc n)))
+        red-team  (mapv #(init-hero (select-hero "Red"  % selected-heroes))
+                        (range 1 (inc n)))]
     (fight blue-team red-team)))
 
 (defn select-combat []
