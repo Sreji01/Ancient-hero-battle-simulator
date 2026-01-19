@@ -5,11 +5,11 @@
    :name "Achilles"
    :title "Legendary Warrior of Troy"
    :stats
-   {:health 80
-    :power 90
-    :defense 65
-    :agility 95
-    :intelligence 80}})
+   {:health 75
+    :power 95
+    :defense 70
+    :agility 100
+    :intelligence 90}})
 
 
 (def king-arthur
@@ -17,11 +17,11 @@
    :name "King Arthur"
    :title "The Once and Future King"
    :stats
-   {:health 90
+   {:health 75
     :power 80
-    :defense 85
+    :defense 70
     :agility 70
-    :intelligence 90}})
+    :intelligence 95}})
 
 
 (def hercules
@@ -29,11 +29,11 @@
    :name "Hercules"
    :title "Son of Zeus"
    :stats
-   {:health 95
-    :power 95
+   {:health 80
+    :power 100
     :defense 80
-    :agility 60
-    :intelligence 70}})
+    :agility 55
+    :intelligence 60}})
 
 
 (def beowulf
@@ -42,10 +42,10 @@
    :title "Slayer of Monsters"
    :stats
    {:health 90
-    :power 85
+    :power 90
     :defense 85
-    :agility 60
-    :intelligence 75}})
+    :agility 80
+    :intelligence 85}})
 
 
 (def leonidas
@@ -53,11 +53,11 @@
    :name "Leonidas"
    :title "King of Sparta"
    :stats
-   {:health 88
-    :power 82
-    :defense 90
-    :agility 75
-    :intelligence 80}})
+   {:health 90
+    :power 80
+    :defense 100
+    :agility 70
+    :intelligence 85}})
 
 
 (def gilgamesh
@@ -65,11 +65,11 @@
    :name "Gilgamesh"
    :title "King of Uruk"
    :stats
-   {:health 90
-    :power 85
+   {:health 100
+    :power 80
     :defense 80
     :agility 75
-    :intelligence 85}})
+    :intelligence 80}})
 
 
 (def heroes
