@@ -162,12 +162,23 @@
 (defn init-hero [hero]
   (assoc hero :current-hp (atom (get-in hero [:stats :health]))))
 
-(defn draft-category [count cards type selected-in-cat]
+(defn random-computer-pick [selected-in-cat cards type]
+  (let [available (remove #(contains? @selected-in-cat (:id %)) cards)
+        picked (rand-nth available)]
+    (println (format "\nComputer (Red Player) is picking %s..." type))
+    (Thread/sleep 2000)
+
+    (swap! selected-in-cat conj (:id picked))
+    (println (str (:name picked) " selected!"))
+    (Thread/sleep 2000)
+    picked))
+
+(defn draft-category [mode count cards type selected-in-cat]
   (reset! selected-in-cat #{})
   (loop [n 1
          blue-picks []
          red-picks []
-         turn :blue] ;
+         turn :blue]
     (cond
       (> n count) [blue-picks red-picks]
 
@@ -176,19 +187,21 @@
         (recur n (conj blue-picks pick) red-picks :red))
 
       (= turn :red)
-      (let [pick (select-card "Red Player" n selected-in-cat cards type)]
+      (let [pick (if (= mode "1")
+                   (random-computer-pick selected-in-cat cards type)
+                   (select-card "Red Player" n selected-in-cat cards type))]
         (recur (inc n) blue-picks (conj red-picks pick) :blue)))))
 
-(defn select-nvn [n]
+(defn select-nvn [mode n]
   (println (format "\n--- %dv%d Combat ---" n n))
   (let [hero-count   (* n 2)
         action-count (+ 2 (* n 2))
         equip-count  n
         selected     (atom #{})
 
-        [blue-heroes red-heroes] (draft-category hero-count heroes/heroes "Hero Card" selected)
-        [blue-actions red-actions] (draft-category action-count actions/actions "Action Card" selected)
-        [blue-equipment red-equpiment] (draft-category equip-count equipment/equipment "Equipment Card" selected)
+        [blue-heroes red-heroes] (draft-category mode hero-count heroes/heroes "Hero Card" selected)
+        [blue-actions red-actions] (draft-category mode action-count actions/actions "Action Card" selected)
+        [blue-equipment red-equpiment] (draft-category mode equip-count equipment/equipment "Equipment Card" selected)
 
         blue-cards {:heroes    (mapv init-hero blue-heroes)
                     :actions   blue-actions
@@ -207,16 +220,33 @@
   (println "3. 3v3")
   (println "4. Back to main menu"))
 
-(defn select-combat []
+(defn select-combat [mode]
   (loop []
     (show-combat-menu)
     (let [choice (read-line)]
       (case choice
-        "1" (do (select-nvn 1) (recur))
-        "2" (do (select-nvn 2) (recur))
-        "3" (do (select-nvn 3) (recur))
+        "1" (do (select-nvn mode 1) (recur))
+        "2" (do (select-nvn mode 2) (recur))
+        "3" (do (select-nvn mode 3) (recur))
         "4" (println "Returning to main menu...")
         (do (println "Invalid choice") (recur))))))
+
+(defn select-mode []
+  (println "\nSelect Mode:")
+  (println "1. Singleplayer (PvE)")
+  (println "2. Multiplayer (PvP)")
+  (let [choice (read-line)]
+    (cond
+      (= choice "1")
+      (do (println "\nPvE selected!") "1")
+
+      (= choice "2")
+      (do (println "\nPvP selected!") "2")
+
+      :else
+      (do (println "\nInvalid choice, defaulting to PvE.")
+          (println "Singleplayer (PvE) selected!")
+          "1"))))
 
 (defn show-main-menu []
   (println "\nMain Menu")
@@ -229,7 +259,9 @@
     (show-main-menu)
     (let [choice (read-line)]
       (case choice
-        "1" (do (select-combat) (recur))
+        "1" (let [mode (select-mode)]
+              (select-combat mode)
+              (recur))
         "2" (do (println "Create your hero...") (recur))
         "3" (println "Bye!")
         (do (println "Invalid choice") (recur))))))

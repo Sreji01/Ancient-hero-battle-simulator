@@ -16,9 +16,9 @@
    {:id 3
     :name "Reckless Strike"
     :type :attack
-    :effect {:probabilities [{:chance 60 :target :enemy :damage 75}
-                             {:chance 40 :target :self  :damage 75}]}
-    :description "Risky attack: 60% chance to deal 75 damage to target enemy hero, 40% chance to deal 75 damage to yourself."}
+    :effect {:probabilities [{:chance 50 :target :enemy :damage 75}
+                             {:chance 50 :target :self  :damage 75}]}
+    :description "Risky attack: Deal 50 damage to yourself or enemy."}
 
    {:id 4
     :name "Assassinate"
