@@ -40,7 +40,7 @@
   {:id 4
    :name "Saladin"
    :title "Sultan and Master Strategist"
-   :type :strategist-mage-knight
+   :type :strategist
    :tier :a
    :stats {:health 70
            :power 78
