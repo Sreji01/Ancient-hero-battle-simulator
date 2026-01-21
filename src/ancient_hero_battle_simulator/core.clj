@@ -175,7 +175,7 @@
 
     (swap! selected-in-cat conj (:id picked))
     (println (str (:name picked) " selected!"))
-    (Thread/sleep 2000)
+    (Thread/sleep 1000)
     picked))
 
 (defn draft-category [mode count cards type selected-in-cat]
@@ -219,45 +219,43 @@
   (let [choice (read-line)]
     (if (= choice "2") "random" "draft")))
 
+(defn pick-category
+  [method mode count cards type selected]
+  (if (= method "draft")
+    (draft-category mode count cards type selected)
+    (let [[blue red] (random-all-picks count cards)]
+      (announce-random-picks blue red type)
+      [blue red])))
+
 (defn select-nvn [mode n]
   (println (format "\n--- %dv%d Combat ---" n n))
-  (let [method (select-method)                          
+  (let [method (select-method)
+        selected (atom #{})
+
         hero-count   (* n 2)
         action-count (+ 2 (* n 2))
         equip-count  n
-        selected     (atom #{})
 
         [blue-heroes red-heroes]
-        (if (= method "draft")
-          (draft-category mode hero-count heroes/heroes "Hero Card" selected)
-          (let [[blue red] (random-all-picks hero-count heroes/heroes)]
-            (announce-random-picks blue red "Hero Cards")
-            [blue red]))
+        (pick-category method mode hero-count heroes/heroes "Hero Cards" selected)
 
         [blue-actions red-actions]
-        (if (= method "draft")
-          (draft-category mode action-count actions/actions "Action Card" selected)
-          (let [[blue red] (random-all-picks action-count actions/actions)]
-            (announce-random-picks blue red "Action Cards")
-            [blue red]))
+        (pick-category method mode action-count actions/actions "Action Cards" selected)
 
         [blue-equipment red-equipment]
-        (if (= method "draft")
-          (draft-category mode equip-count equipment/equipment "Equipment Card" selected)
-          (let [[blue red] (random-all-picks equip-count equipment/equipment)]
-            (announce-random-picks blue red "Equipment Cards")
-            [blue red]))
+        (pick-category method mode equip-count equipment/equipment "Equipment Cards" selected)
 
         blue-cards {:heroes    (mapv init-hero blue-heroes)
-                   :actions   blue-actions
-                   :equipment blue-equipment}
+                    :actions   blue-actions
+                    :equipment blue-equipment}
+
         red-cards  {:heroes    (mapv init-hero red-heroes)
-                   :actions   red-actions
-                   :equipment red-equipment}]
+                    :actions   red-actions
+                    :equipment red-equipment}]
 
     (println "\nAll cards assigned! Starting battle...")
     (Thread/sleep 1000)
-    (fight (blue-cards) (red-cards))))
+    (fight (:heroes blue-cards) (:heroes red-cards))))
 
 (defn show-combat-menu []
   (println "\nSelect combat type")
