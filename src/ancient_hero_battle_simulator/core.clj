@@ -1,6 +1,6 @@
 (ns ancient-hero-battle-simulator.core
   (:gen-class)
-  (:require [ancient-hero-battle-simulator.heroes :as heroes]))
+  (:require [ancient-hero-battle-simulator.cards.heroes :as heroes]))
 
 (defn list-heroes []
   (println "\nAvailable Heroes:")

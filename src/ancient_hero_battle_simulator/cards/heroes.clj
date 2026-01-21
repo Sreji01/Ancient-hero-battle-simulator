@@ -1,4 +1,4 @@
-(ns ancient-hero-battle-simulator.heroes)
+(ns ancient-hero-battle-simulator.cards.heroes)
 
 (def achilles
   {:id 1
