@@ -4,46 +4,6 @@
   (:require [ancient-hero-battle-simulator.cards.actions :as actions])
   (:require [ancient-hero-battle-simulator.cards.equipment :as equipment]))
 
-(defn list-cards [cards selected-cards]
-  (doseq [card (remove #(contains? @selected-cards (:id %)) cards)]
-    (println
-     (str (:id card) ". " (:name card) " - " (:description card)))))
-
-(defn show-main-menu []
-  (println "\nMain Menu")
-  (println "1. Fight!")
-  (println "2. Create your hero")
-  (println "3. Exit"))
-
-(defn show-combat-menu []
-  (println "\nSelect combat type")
-  (println "1. 1v1")
-  (println "2. 2v2")
-  (println "3. 3v3")
-  (println "4. Back to main menu"))
-
-(defn select-card [player card-number selected-cards cards card-type]
-  (loop []
-    (println (format "\n%s: Select %s %d (enter number):" player card-type card-number))
-    (list-cards cards selected-cards) 
-    (if-let [id (try (Integer/parseInt (read-line))
-                     (catch NumberFormatException _ nil))]
-      (if-let [card (some #(and (= (:id %) id) %) cards)]
-        (if (contains? @selected-cards id)
-          (do
-            (println "\nAlready selected! Choose another one.")
-            (recur))
-          (do
-            (swap! selected-cards conj id)
-            (println (str "\n" (:name card) " selected!"))
-            card))
-        (do
-          (println "\nCard not found.")
-          (recur)))
-      (do
-        (println "\nInvalid input.")
-        (recur)))))
-
 (defn alive? [hero]
   (pos? @(:current-hp hero)))
 
@@ -172,41 +132,80 @@
               (recur))))
         (recur (inc round))))))
 
+(defn list-cards [cards selected-cards]
+  (doseq [card (remove #(contains? @selected-cards (:id %)) cards)]
+    (println
+     (str (:id card) ". " (:name card) " - " (:description card)))))
+
+(defn select-card [player card-number selected-cards cards card-type]
+  (loop []
+    (println (format "\n%s: Select %s %d (enter number):" player card-type card-number))
+    (list-cards cards selected-cards)
+    (if-let [id (try (Integer/parseInt (read-line))
+                     (catch NumberFormatException _ nil))]
+      (if-let [card (some #(and (= (:id %) id) %) cards)]
+        (if (contains? @selected-cards id)
+          (do
+            (println "\nAlready selected! Choose another one.")
+            (recur))
+          (do
+            (swap! selected-cards conj id)
+            (println (str "\n" (:name card) " selected!"))
+            card))
+        (do
+          (println "\nCard not found.")
+          (recur)))
+      (do
+        (println "\nInvalid input.")
+        (recur)))))
+
 (defn init-hero [hero]
   (assoc hero :current-hp (atom (get-in hero [:stats :health]))))
 
+(defn draft-category [count cards type selected-in-cat]
+  (reset! selected-in-cat #{})
+  (loop [n 1
+         blue-picks []
+         red-picks []
+         turn :blue] ;
+    (cond
+      (> n count) [blue-picks red-picks]
+
+      (= turn :blue)
+      (let [pick (select-card "Blue Player" n selected-in-cat cards type)]
+        (recur n (conj blue-picks pick) red-picks :red))
+
+      (= turn :red)
+      (let [pick (select-card "Red Player" n selected-in-cat cards type)]
+        (recur (inc n) blue-picks (conj red-picks pick) :blue)))))
+
 (defn select-nvn [n]
-  (println (format "\n--- %dv%d Card Combat ---" n n))
+  (println (format "\n--- %dv%d Combat ---" n n))
   (let [hero-count   (* n 2)
         action-count (+ 2 (* n 2))
         equip-count  n
-        selected-in-cat (atom #{})
+        selected     (atom #{})
 
-        select-set (fn [player-name count cards card-type]
-                     (doall (map #(select-card player-name % selected-in-cat cards card-type)
-                                 (range 1 (inc count)))))]
+        [blue-heroes red-heroes] (draft-category hero-count heroes/heroes "Hero Card" selected)
+        [blue-actions red-actions] (draft-category action-count actions/actions "Action Card" selected)
+        [blue-equipment red-equpiment] (draft-category equip-count equipment/equipment "Equipment Card" selected)
 
-    (reset! selected-in-cat #{})
-    (let [blue-h (select-set "Blue Player" hero-count heroes/heroes "Hero Card")
-          red-h  (select-set "Red Player" hero-count heroes/heroes "Hero Card")
+        blue-cards {:heroes    (mapv init-hero blue-heroes)
+                    :actions   blue-actions
+                    :equipment blue-equipment}
+        red-cards  {:heroes    (mapv init-hero red-heroes)
+                    :actions   red-actions
+                    :equipment red-equpiment}]
 
-          _ (reset! selected-in-cat #{})
-          blue-a (select-set "Blue Player" action-count actions/actions "Action Card")
-          red-a  (select-set "Red Player" action-count actions/actions "Action Card")
+    (println "\nCards selected! Starting battle...")
+    (fight blue-cards red-cards)))
 
-          _ (reset! selected-in-cat #{})
-          blue-e (select-set "Blue Player" equip-count equipment/equipment "Equipment Card")
-          red-e  (select-set "Red Player" equip-count equipment/equipment "Equipment Card")
-
-          blue-cards {:heroes    (mapv init-hero blue-h)
-                      :actions   blue-a
-                      :equipment blue-e}
-          red-cards  {:heroes    (mapv init-hero red-h)
-                      :actions   red-a
-                      :equipment red-e}]
-
-      (println "\nCards selected! Starting battle...")
-      (fight blue-cards red-cards))))
+(defn show-combat-menu []
+  (println "\nSelect combat type")
+  (println "1. 1v1")
+  (println "2. 2v2")
+  (println "3. 3v3")
+  (println "4. Back to main menu"))
 
 (defn select-combat []
   (loop []
@@ -218,6 +217,12 @@
         "3" (do (select-nvn 3) (recur))
         "4" (println "Returning to main menu...")
         (do (println "Invalid choice") (recur))))))
+
+(defn show-main-menu []
+  (println "\nMain Menu")
+  (println "1. Fight!")
+  (println "2. Create your hero")
+  (println "3. Exit"))
 
 (defn -main []
   (loop []
