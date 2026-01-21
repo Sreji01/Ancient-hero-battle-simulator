@@ -1,3 +1,5 @@
+(ns ancient-hero-battle-simulator.cards.actions)
+
 (def actions
   [{:id 1
     :name "Power Strike"
