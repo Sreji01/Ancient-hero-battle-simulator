@@ -90,35 +90,68 @@
         (swap! attacked-heroes conj (:id attacker))
         (swap! defended-heroes conj (:id defender))))))
 
-(defn fight [blue-cards red-cards]
-  (loop [round 1]
-    (cond
-      (not (team-alive? blue-cards)) (println "\n🏆 RED TEAM WINS!.")
-      (not (team-alive? red-cards)) (println "\n🏆 BLUE TEAM WINS!.")
-      :else
-      (do
-        (println (str "\n=== ROUND " round " ==="))
-        (let [attacked-heroes (atom #{})
-              defended-heroes (atom #{})
-              dead-announced  (atom #{})]
-          (loop []
-            (when (and (team-alive? blue-cards) (team-alive? red-cards)
-                       (some #(and (alive? %) (not (contains? @attacked-heroes (:id %)))) blue-cards)
-                       (some #(and (alive? %) (not (contains? @defended-heroes (:id %)))) red-cards))
-              (let [[attacker defender] (choose-combatants blue-cards red-cards attacked-heroes defended-heroes)]
-                (attack attacker defender)
-                (swap! attacked-heroes conj (:id attacker))
-                (swap! defended-heroes conj (:id defender))
-                (when (and (dead? defender) (not (contains? @dead-announced (:id defender))))
-                  (println (str (:name defender) " is dead!"))
-                  (swap! dead-announced conj (:id defender)))
-                (enemy-attack blue-cards red-cards attacked-heroes defended-heroes)
-                (doseq [hero (concat blue-cards red-cards)]
-                  (when (and (dead? hero) (not (contains? @dead-announced (:id hero))))
-                    (println (str (:name hero) " is dead!"))
-                    (swap! dead-announced conj (:id hero)))))
-              (recur))))
-        (recur (inc round))))))
+
+#_(defn fight [blue-cards red-cards mode]
+    (loop [round 1]
+      (cond
+        (not (team-alive? blue-cards)) (println "\n🏆 RED TEAM WINS!.")
+        (not (team-alive? red-cards)) (println "\n🏆 BLUE TEAM WINS!.")
+        :else
+        (do
+          (println (str "\n=== ROUND " round " ==="))
+          (let [attacked-heroes (atom #{})
+                defended-heroes (atom #{})
+                dead-announced  (atom #{})]
+            (loop []
+              (when (and (team-alive? blue-cards) (team-alive? red-cards)
+                         (some #(and (alive? %) (not (contains? @attacked-heroes (:id %)))) blue-cards)
+                         (some #(and (alive? %) (not (contains? @defended-heroes (:id %)))) red-cards))
+                (let [[attacker defender] (choose-combatants blue-cards red-cards attacked-heroes defended-heroes)]
+                  (attack attacker defender)
+                  (swap! attacked-heroes conj (:id attacker))
+                  (swap! defended-heroes conj (:id defender))
+                  (when (and (dead? defender) (not (contains? @dead-announced (:id defender))))
+                    (println (str (:name defender) " is dead!"))
+                    (swap! dead-announced conj (:id defender)))
+                  (enemy-attack blue-cards red-cards attacked-heroes defended-heroes)
+                  (doseq [hero (concat blue-cards red-cards)]
+                    (when (and (dead? hero) (not (contains? @dead-announced (:id hero))))
+                      (println (str (:name hero) " is dead!"))
+                      (swap! dead-announced conj (:id hero)))))
+                (recur))))
+          (recur (inc round))))))
+
+(defn draw-cards-from-pool [n {:keys [heroes actions equipment]}]
+  (let [total (case n
+                1 3
+                2 5
+                3 7)
+        hero (rand-nth heroes)
+        non-hero-cards (shuffle (concat actions equipment))
+        remaining (- total 1)
+        rest (take remaining non-hero-cards)]
+    (shuffle (cons hero rest))))
+
+(defn draw-phase [player-name n cards]
+  (println (str "\n--- " player-name " DRAW PHASE ---"))
+  (Thread/sleep 1000)
+
+  (let [drawn (draw-cards-from-pool n cards)]
+    (doseq [card drawn]
+      (Thread/sleep 800)
+      (println (str player-name " draws: " (:name card))))))
+
+
+(defn player-turn [player-name cards n]
+  (println "\n==============================")
+  (println (str ">>> " player-name " PLAYER TURN <<<"))
+  (println "==============================")
+
+  (draw-phase player-name n cards))
+
+(defn fight-cards [blue-cards red-cards n]
+  (player-turn "BLUE" blue-cards n)
+  (player-turn "RED" red-cards n))
 
 (defn select-card [player card-number selected-cards cards card-type]
   (loop []
@@ -181,7 +214,7 @@
         red-cards {:heroes (mapv init-hero red-heroes) :actions red-actions :equipment red-equipment}]
     (println "\nAll cards assigned! Starting battle...")
     (Thread/sleep 1000)
-    (fight (:heroes blue-cards) (:heroes red-cards))))
+    (fight-cards blue-cards red-cards n)))
 
 (defn select-combat [mode]
   (loop []
