@@ -17,7 +17,6 @@
 (defn init-hero [hero]
   (assoc hero :current-hp (atom (get-in hero [:stats :health]))))
 
-
 (defn list-cards [cards selected-cards]
   (doseq [card (remove #(contains? @selected-cards (:id %)) cards)]
     (let [tier-info (when (:tier card) (str "[" (str/upper-case (name (:tier card))) " Tier] "))
@@ -90,7 +89,6 @@
         (swap! attacked-heroes conj (:id attacker))
         (swap! defended-heroes conj (:id defender))))))
 
-
 #_(defn fight [blue-cards red-cards mode]
     (loop [round 1]
       (cond
@@ -121,26 +119,49 @@
                 (recur))))
           (recur (inc round))))))
 
-(defn print-field [field]
-  (doseq [slot field]
-    (print (if-let [a (:action slot)]
-             (format "[%s] " (:name a))
-             "[    ] ")))
-  (println)
+(defn print-card [card]
+  (cond
+    (and (:stats card) (:current-hp card))
+    (format "[%s %dHP]" (:name card) @(:current-hp card))
 
-  (doseq [slot field]
-    (print (if-let [h (:hero slot)]
-             (format "[%s] " (:name h))
-             "[    ] ")))
-  (println))
+    :else
+    (format "[%s]" (:name card))))
+
+(defn print-field [field orientation]
+  (let [[top bottom]
+        (if (= orientation :hero-bottom)
+          [:action :hero]
+          [:hero :action])]
+
+    (doseq [slot field]
+      (print
+       (if-let [c (get slot top)]
+         (str (print-card c) " ")
+         "[    ] ")))
+    (println)
+
+    (doseq [slot field]
+      (print
+       (if-let [c (get slot bottom)]
+         (str (print-card c) " ")
+         "[    ] ")))
+    (println)))
 
 (defn display-board [blue-field red-field n]
-  (print-field @red-field)
+  (print-field @red-field :hero-bottom)
 
   (println (apply str (repeat (* n 6) "=")))
 
-  (print-field @blue-field)
+  (print-field @blue-field :hero-top)
+
   (println))
+
+(defn first-empty-slot-index [field]
+  (first
+   (keep-indexed
+    (fn [i slot]
+      (when (empty? slot) i))
+    field)))
 
 (defn selection-phase
   [player-name hand field enemy-field n]
@@ -157,13 +178,14 @@
       (if-let [card (nth @hand (dec choice) nil)]
         (do
           (println (str "\n" player-name " plays: " (:name card)))
-
           (swap! hand #(vec (remove #{card} %)))
 
-          (let [slot (cond
-                       (:stats card) {:hero card}
-                       :else          {:action card})]
-            (swap! field conj slot))
+          (if-let [idx (first-empty-slot-index @field)]
+            (let [slot (if (:stats card)
+                         {:hero card}
+                         {:action card})]
+              (swap! field assoc idx slot))
+            (println "No empty slots available!"))
 
           (display-board
            (if (= player-name "BLUE") field enemy-field)
@@ -173,7 +195,6 @@
           card)
         (do (println "Invalid choice.") (recur)))
       (do (println "Invalid input.") (recur)))))
-
 
 (defn draw-cards-from-pool [n {:keys [heroes actions equipment]}]
   (let [total (case n
@@ -207,9 +228,12 @@
     (Thread/sleep 500)
     (selection-phase player-name hand field enemy-field n)))
 
+(defn init-field [n]
+  (vec (repeat n {})))
+
 (defn fight-cards [blue-cards red-cards n]
-  (let [blue-field (atom [])
-        red-field  (atom [])]
+  (let [blue-field (atom (init-field n))
+        red-field  (atom (init-field n))]
 
     (player-turn "BLUE" blue-cards n blue-field red-field)
     (player-turn "RED"  red-cards  n red-field  blue-field)))
