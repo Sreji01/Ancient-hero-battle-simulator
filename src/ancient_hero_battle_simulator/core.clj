@@ -121,6 +121,25 @@
                 (recur))))
           (recur (inc round))))))
 
+(defn selection-phase [player-name hand]
+  (println (str "\n--- " player-name " SELECTION PHASE ---"))
+  (Thread/sleep 500)
+
+  (loop []
+    (doseq [[id card] (map-indexed vector @hand)]
+      (println (str (inc id) ". " (:name card) " - " (:description card))))
+
+    (println "\nChoose a card to play:")
+    (if-let [choice (try (Integer/parseInt (read-line))
+                         (catch Exception _ nil))]
+      (if-let [card (nth @hand (dec choice) nil)]
+        (do
+          (println (str "\n" player-name " plays: " (:name card)))
+          (swap! hand #(vec (remove #{card} %)))
+          card)
+        (do (println "Invalid choice.") (recur)))
+      (do (println "Invalid input.") (recur)))))
+
 (defn draw-cards-from-pool [n {:keys [heroes actions equipment]}]
   (let [total (case n
                 1 3
@@ -132,25 +151,31 @@
         rest (take remaining non-hero-cards)]
     (shuffle (cons hero rest))))
 
-(defn draw-phase [player-name n cards]
+(defn draw-phase [player-name n cards hand]
   (println (str "\n--- " player-name " DRAW PHASE ---"))
   (Thread/sleep 1000)
 
   (let [drawn (draw-cards-from-pool n cards)]
     (doseq [card drawn]
       (Thread/sleep 800)
-      (println (str player-name " draws: " (:name card))))))
-
+      (println (str player-name " draws: " (:name card)))
+      (swap! hand conj card))))
 
 (defn player-turn [player-name cards n]
   (println "\n==============================")
   (println (str ">>> " player-name " PLAYER TURN <<<"))
   (println "==============================")
 
-  (draw-phase player-name n cards))
+  (let [hand (atom [])]
+
+    (draw-phase player-name n cards hand)
+
+    (selection-phase player-name hand))
+      (Thread/sleep 1000))
 
 (defn fight-cards [blue-cards red-cards n]
   (player-turn "BLUE" blue-cards n)
+
   (player-turn "RED" red-cards n))
 
 (defn select-card [player card-number selected-cards cards card-type]
