@@ -121,7 +121,29 @@
                 (recur))))
           (recur (inc round))))))
 
-(defn selection-phase [player-name hand]
+(defn print-field [field]
+  (doseq [slot field]
+    (print (if-let [a (:action slot)]
+             (format "[%s] " (:name a))
+             "[    ] ")))
+  (println)
+
+  (doseq [slot field]
+    (print (if-let [h (:hero slot)]
+             (format "[%s] " (:name h))
+             "[    ] ")))
+  (println))
+
+(defn display-board [blue-field red-field n]
+  (print-field @red-field)
+
+  (println (apply str (repeat (* n 6) "=")))
+
+  (print-field @blue-field)
+  (println))
+
+(defn selection-phase
+  [player-name hand field enemy-field n]
   (println (str "\n--- " player-name " SELECTION PHASE ---"))
   (Thread/sleep 500)
 
@@ -135,10 +157,23 @@
       (if-let [card (nth @hand (dec choice) nil)]
         (do
           (println (str "\n" player-name " plays: " (:name card)))
+
           (swap! hand #(vec (remove #{card} %)))
+
+          (let [slot (cond
+                       (:stats card) {:hero card}
+                       :else          {:action card})]
+            (swap! field conj slot))
+
+          (display-board
+           (if (= player-name "BLUE") field enemy-field)
+           (if (= player-name "BLUE") enemy-field field)
+           n)
+
           card)
         (do (println "Invalid choice.") (recur)))
       (do (println "Invalid input.") (recur)))))
+
 
 (defn draw-cards-from-pool [n {:keys [heroes actions equipment]}]
   (let [total (case n
@@ -161,22 +196,23 @@
       (println (str player-name " draws: " (:name card)))
       (swap! hand conj card))))
 
-(defn player-turn [player-name cards n]
+(defn player-turn
+  [player-name cards n field enemy-field]
   (println "\n==============================")
   (println (str ">>> " player-name " PLAYER TURN <<<"))
   (println "==============================")
 
   (let [hand (atom [])]
-
     (draw-phase player-name n cards hand)
-
-    (selection-phase player-name hand))
-      (Thread/sleep 1000))
+    (Thread/sleep 500)
+    (selection-phase player-name hand field enemy-field n)))
 
 (defn fight-cards [blue-cards red-cards n]
-  (player-turn "BLUE" blue-cards n)
+  (let [blue-field (atom [])
+        red-field  (atom [])]
 
-  (player-turn "RED" red-cards n))
+    (player-turn "BLUE" blue-cards n blue-field red-field)
+    (player-turn "RED"  red-cards  n red-field  blue-field)))
 
 (defn select-card [player card-number selected-cards cards card-type]
   (loop []
