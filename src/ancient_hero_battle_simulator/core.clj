@@ -89,36 +89,6 @@
         (swap! attacked-heroes conj (:id attacker))
         (swap! defended-heroes conj (:id defender))))))
 
-#_(defn fight [blue-cards red-cards mode]
-    (loop [round 1]
-      (cond
-        (not (team-alive? blue-cards)) (println "\n🏆 RED TEAM WINS!.")
-        (not (team-alive? red-cards)) (println "\n🏆 BLUE TEAM WINS!.")
-        :else
-        (do
-          (println (str "\n=== ROUND " round " ==="))
-          (let [attacked-heroes (atom #{})
-                defended-heroes (atom #{})
-                dead-announced  (atom #{})]
-            (loop []
-              (when (and (team-alive? blue-cards) (team-alive? red-cards)
-                         (some #(and (alive? %) (not (contains? @attacked-heroes (:id %)))) blue-cards)
-                         (some #(and (alive? %) (not (contains? @defended-heroes (:id %)))) red-cards))
-                (let [[attacker defender] (choose-combatants blue-cards red-cards attacked-heroes defended-heroes)]
-                  (attack attacker defender)
-                  (swap! attacked-heroes conj (:id attacker))
-                  (swap! defended-heroes conj (:id defender))
-                  (when (and (dead? defender) (not (contains? @dead-announced (:id defender))))
-                    (println (str (:name defender) " is dead!"))
-                    (swap! dead-announced conj (:id defender)))
-                  (enemy-attack blue-cards red-cards attacked-heroes defended-heroes)
-                  (doseq [hero (concat blue-cards red-cards)]
-                    (when (and (dead? hero) (not (contains? @dead-announced (:id hero))))
-                      (println (str (:name hero) " is dead!"))
-                      (swap! dead-announced conj (:id hero)))))
-                (recur))))
-          (recur (inc round))))))
-
 (defn print-card [card]
   (cond
     (and (:stats card) (:current-hp card))
@@ -201,11 +171,12 @@
                 1 3
                 2 5
                 3 7)
-        hero (rand-nth heroes)
-        non-hero-cards (shuffle (concat actions equipment))
-        remaining (- total 1)
-        rest (take remaining non-hero-cards)]
-    (shuffle (cons hero rest))))
+        pool (concat heroes actions equipment)]
+    (loop []
+      (let [drawn (take total (shuffle pool))]
+        (if (some :stats drawn)
+          drawn
+          (recur))))))
 
 (defn draw-phase [player-name n cards hand]
   (println (str "\n--- " player-name " DRAW PHASE ---"))
@@ -217,8 +188,28 @@
       (println (str player-name " draws: " (:name card)))
       (swap! hand conj card))))
 
+(defn heroes-on-field [field]
+  (->> field
+       (map :hero)
+       (filter some?)
+       (filter alive?)
+       vec))
+
+(defn attack-phase [player-name field enemy-field]
+  (println (str "\n--- " player-name " ATTACK PHASE ---"))
+  (Thread/sleep 800)
+
+  (let [attackers (heroes-on-field @field)
+        defenders (heroes-on-field @enemy-field)]
+    (when (and (seq attackers) (seq defenders))
+      (let [attacker (choose-hero attackers player-name (atom #{}))
+            defender (choose-hero defenders
+                                  (if (= player-name "BLUE") "Red" "Blue")
+                                  (atom #{}))]
+        (attack attacker defender)))))
+
 (defn player-turn
-  [player-name cards n field enemy-field]
+  [player-name cards n field enemy-field can-attack?]
   (println "\n==============================")
   (println (str ">>> " player-name " PLAYER TURN <<<"))
   (println "==============================")
@@ -226,7 +217,10 @@
   (let [hand (atom [])]
     (draw-phase player-name n cards hand)
     (Thread/sleep 500)
-    (selection-phase player-name hand field enemy-field n)))
+    (selection-phase player-name hand field enemy-field n)
+
+    (when can-attack?
+      (attack-phase player-name field enemy-field))))
 
 (defn init-field [n]
   (vec (repeat n {})))
@@ -235,8 +229,13 @@
   (let [blue-field (atom (init-field n))
         red-field  (atom (init-field n))]
 
-    (player-turn "BLUE" blue-cards n blue-field red-field)
-    (player-turn "RED"  red-cards  n red-field  blue-field)))
+    (player-turn "BLUE" blue-cards n blue-field red-field false)
+    (player-turn "RED"  red-cards  n red-field  blue-field true)
+
+    (loop []
+        (player-turn "BLUE" blue-cards n blue-field red-field true)
+        (player-turn "RED"  red-cards  n red-field  blue-field true)
+        (recur))))
 
 (defn select-card [player card-number selected-cards cards card-type]
   (loop []
