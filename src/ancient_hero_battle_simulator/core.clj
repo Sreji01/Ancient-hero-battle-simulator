@@ -166,25 +166,35 @@
         (do (println "Invalid choice.") (recur)))
       (do (println "Invalid input.") (recur)))))
 
-(defn draw-cards-from-pool [n {:keys [heroes actions equipment]}]
-  (let [total (case n
-                1 3
-                2 5
-                3 7)
-        pool (concat heroes actions equipment)]
-    (loop []
-      (let [drawn (take total (shuffle pool))]
-        (if (some :stats drawn)
-          drawn
+(defn draw-from-deck [deck n]
+  (let [drawn (take n @deck)]
+    (swap! deck #(vec (drop n %)))
+    drawn))
+
+(defn first-draw-with-hero [deck n]
+  (loop []
+    (let [drawn (draw-from-deck deck n)]
+      (if (some :stats drawn)
+        drawn
+        (do
+          (swap! deck #(shuffle (vec (concat drawn %))))
           (recur))))))
 
-(defn draw-phase [player-name n cards hand]
+(defn draw-phase [player-name n deck hand first-draw?]
   (println (str "\n--- " player-name " DRAW PHASE ---"))
-  (Thread/sleep 1000)
+  (Thread/sleep 800)
 
-  (let [drawn (draw-cards-from-pool n cards)]
+  (let [count (if first-draw?
+                (case n
+                  1 3
+                  2 5
+                  3 7)
+                1)
+        drawn (if first-draw?
+                (first-draw-with-hero deck count)
+                (draw-from-deck deck 1))]
     (doseq [card drawn]
-      (Thread/sleep 800)
+      (Thread/sleep 500)
       (println (str player-name " draws: " (:name card)))
       (swap! hand conj card))))
 
@@ -209,14 +219,14 @@
         (attack attacker defender)))))
 
 (defn player-turn
-  [player-name cards n field enemy-field can-attack?]
+  [player-name n deck field enemy-field can-attack? first-draw?]
   (println "\n==============================")
   (println (str ">>> " player-name " PLAYER TURN <<<"))
   (println "==============================")
 
   (let [hand (atom [])]
-    (draw-phase player-name n cards hand)
-    (Thread/sleep 500)
+    (draw-phase player-name n deck hand first-draw?)
+    (Thread/sleep 400)
     (selection-phase player-name hand field enemy-field n)
 
     (when can-attack?
@@ -225,17 +235,22 @@
 (defn init-field [n]
   (vec (repeat n {})))
 
+(defn init-player-deck [{:keys [heroes actions equipment]}]
+  (atom (shuffle (vec (concat heroes actions equipment)))))
+
 (defn fight-cards [blue-cards red-cards n]
   (let [blue-field (atom (init-field n))
-        red-field  (atom (init-field n))]
+        red-field  (atom (init-field n))
+        blue-deck  (init-player-deck blue-cards)
+        red-deck   (init-player-deck red-cards)]
 
-    (player-turn "BLUE" blue-cards n blue-field red-field false)
-    (player-turn "RED"  red-cards  n red-field  blue-field true)
+    (player-turn "BLUE" n blue-deck blue-field red-field false true)
+    (player-turn "RED"  n red-deck  red-field  blue-field true  true)
 
     (loop []
-        (player-turn "BLUE" blue-cards n blue-field red-field true)
-        (player-turn "RED"  red-cards  n red-field  blue-field true)
-        (recur))))
+      (player-turn "BLUE" n blue-deck blue-field red-field true false)
+      (player-turn "RED"  n red-deck  red-field  blue-field true false)
+      (recur))))
 
 (defn select-card [player card-number selected-cards cards card-type]
   (loop []
