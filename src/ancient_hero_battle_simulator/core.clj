@@ -30,9 +30,9 @@
     (let [blue-card (nth blue-picks i)
           red-card (nth red-picks i)]
       (println (str "Blue Player gets: " (:name blue-card)))
-      (Thread/sleep 500)
+      (Thread/sleep 200)
       (println (str "Red Player gets: " (:name red-card)))
-      (Thread/sleep 500))))
+      (Thread/sleep 200))))
 
 (defn show-main-menu []
   (println "\nMain Menu\n1. Fight!\n2. Create your hero\n3. Exit"))
@@ -134,43 +134,61 @@
         i))
     field)))
 
+(defn first-empty-action-slot-index [field]
+  (first
+   (keep-indexed
+    (fn [i slot]
+      (when (or (nil? (:action slot)) (empty? (:action slot)))
+        i))
+    field)))
+
 (defn selection-phase
   [player-name hand field enemy-field n]
   (println (str "\n--- " player-name " SELECTION PHASE ---"))
-  (Thread/sleep 500)
+  (Thread/sleep 1000)
 
   (loop []
     (doseq [[id card] (map-indexed vector @hand)]
       (println (str (inc id) ". " (:name card) " - " (:description card))))
 
     (println "\nChoose a card to play:")
-    (if-let [choice (try (Integer/parseInt (read-line))
-                         (catch Exception _ nil))]
-      (if-let [card (nth @hand (dec choice) nil)]
-        (if (:stats card)
-          (if-let [idx (first-empty-hero-slot-index @field)]
-            (do
-              (swap! hand #(vec (remove #{card} %)))
-              (swap! field assoc idx {:hero card})
-              (println (str "\n" player-name " plays: " (:name card)))
-              (display-board
-               (if (= player-name "BLUE") field enemy-field)
-               (if (= player-name "BLUE") enemy-field field)
-               n)
-              card)
-            (do
-              (println "No empty hero slots! Choose a different card.")
-              (recur)))
-          (do
-            (swap! hand #(vec (remove #{card} %)))
-            (println (str "\n" player-name " uses: " (:name card)))
-            (display-board
-             (if (= player-name "BLUE") field enemy-field)
-             (if (= player-name "BLUE") enemy-field field)
-             n)
-            card))
-        (recur))
-      (recur))))
+    (let [choice (try (Integer/parseInt (read-line))
+                      (catch Exception _ nil))]
+      (if (nil? choice)
+        (do (println "Invalid input.") (recur))
+        (let [card (nth @hand (dec choice) nil)]
+          (if (nil? card)
+            (do (println "Invalid choice.") (recur))
+            (cond
+              (:stats card)
+              (if-let [idx (first-empty-hero-slot-index @field)]
+                (do
+                  (swap! hand #(vec (remove #{card} %)))
+                  (swap! field update idx #(merge % {:hero card}))
+                  (println (str "\n" player-name " plays: " (:name card)))
+                  (display-board
+                   (if (= player-name "BLUE") field enemy-field)
+                   (if (= player-name "BLUE") enemy-field field)
+                   n)
+                  card)
+                (do
+                  (println "No empty hero slots! Choose a different card.")
+                  (recur)))
+
+              :else
+              (if-let [idx (first-empty-action-slot-index @field)]
+                (do
+                  (swap! hand #(vec (remove #{card} %)))
+                  (swap! field update idx #(merge % {:action card}))
+                  (println (str "\n" player-name " uses: " (:name card)))
+                  (display-board
+                   (if (= player-name "BLUE") field enemy-field)
+                   (if (= player-name "BLUE") enemy-field field)
+                   n)
+                  card)
+                (do
+                  (println "No empty action/equipment slots! Choose a different card.")
+                  (recur))))))))))
 
 (defn draw-from-deck [deck n]
   (let [drawn (take n @deck)]
@@ -188,7 +206,7 @@
 
 (defn draw-phase [player-name n deck hand first-draw?]
   (println (str "\n--- " player-name " DRAW PHASE ---"))
-  (Thread/sleep 800)
+  (Thread/sleep 1000)
 
   (let [count (if first-draw?
                 (case n
@@ -228,14 +246,16 @@
   [player-name n deck hand field enemy-field can-attack? first-draw?]
   (println "\n==============================")
   (println (str ">>> " player-name " PLAYER TURN <<<"))
+  (Thread/sleep 1000)
   (println "==============================")
 
   (draw-phase player-name n deck hand first-draw?)
   (Thread/sleep 400)
   (selection-phase player-name hand field enemy-field n)
-
   (when can-attack?
-    (attack-phase player-name field enemy-field)))
+    (attack-phase player-name field enemy-field))
+  (swap! field (fn [slots]
+                 (mapv #(dissoc % :action) slots))))
 
 (defn init-field [n]
   (vec (repeat n {})))
