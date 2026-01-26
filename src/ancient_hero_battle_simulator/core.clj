@@ -40,21 +40,27 @@
 (defn show-combat-menu []
   (println "\nSelect combat type\n1. 1v1\n2. 2v2\n3. 3v3\n4. Back to main menu"))
 
-(defn attack [attacker defender]
+(defn attack [attacker defender defender-player-hp]
   (let [atk-stats (:stats attacker)
         def-stats (:stats defender)
-        hit-chance (+ 80 (* (:intelligence atk-stats) 0.1) (* (- (:agility def-stats)) 0.15))
+        hit-chance (+ 80 (* (:intelligence atk-stats) 0.1)
+                      (* (- (:agility def-stats)) 0.15))
         roll (rand-int 100)]
     (Thread/sleep 2000)
     (println (str "\n" (:name attacker) " attacks " (:name defender) "!"))
     (Thread/sleep 2000)
     (if (> roll hit-chance)
-      (do (println (str (:name defender) " dodged the attack!")) (Thread/sleep 2000))
+      (do
+        (println (str (:name defender) " dodged the attack!"))
+        (Thread/sleep 2000))
       (let [raw-damage (:power atk-stats)
             reduction (* (:defense def-stats) 0.5)
             damage (int (max 5 (- raw-damage reduction)))]
         (swap! (:current-hp defender) #(max 0 (- % damage)))
-        (println (str (:name attacker) " deals " damage " damage to " (:name defender) "!"))
+        (swap! defender-player-hp #(max 0 (- % damage)))
+
+        (println (str (:name attacker) " deals " damage " damage to "
+                      (:name defender) "!"))
         (Thread/sleep 2000)))))
 
 (defn choose-hero [team team-name unavailable-heroes]
@@ -76,7 +82,7 @@
       (println (:name defender) " selected as target!")
       [attacker defender])))
 
-(defn enemy-attack [blue-team red-team attacked-heroes defended-heroes]
+#_(defn enemy-attack [blue-team red-team attacked-heroes defended-heroes]
   (let [available-red (vec (filter #(and (alive? %) (not (contains? @attacked-heroes (:id %)))) red-team))
         available-blue (vec (filter #(and (alive? %) (not (contains? @defended-heroes (:id %)))) blue-team))]
     (when (and (seq available-red) (seq available-blue))
@@ -147,48 +153,35 @@
   (println (str "\n--- " player-name " SELECTION PHASE ---"))
   (Thread/sleep 1000)
 
-  (loop []
-    (doseq [[id card] (map-indexed vector @hand)]
-      (println (str (inc id) ". " (:name card) " - " (:description card))))
+  (let [show-board #(display-board
+                     (if (= player-name "BLUE") field enemy-field)
+                     (if (= player-name "BLUE") enemy-field field)
+                     n)]
+    (loop []
+      (doseq [[i card] (map-indexed vector @hand)]
+        (println (str (inc i) ". " (:name card) " - " (:description card))))
 
-    (println "\nChoose a card to play:")
-    (let [choice (try (Integer/parseInt (read-line))
-                      (catch Exception _ nil))]
-      (if (nil? choice)
-        (do (println "Invalid input.") (recur))
-        (let [card (nth @hand (dec choice) nil)]
-          (if (nil? card)
-            (do (println "Invalid choice.") (recur))
-            (cond
-              (:stats card)
-              (if-let [idx (first-empty-hero-slot-index @field)]
-                (do
-                  (swap! hand #(vec (remove #{card} %)))
-                  (swap! field update idx #(merge % {:hero card}))
-                  (println (str "\n" player-name " plays: " (:name card)))
-                  (display-board
-                   (if (= player-name "BLUE") field enemy-field)
-                   (if (= player-name "BLUE") enemy-field field)
-                   n)
-                  card)
-                (do
-                  (println "No empty hero slots! Choose a different card.")
-                  (recur)))
-
-              :else
-              (if-let [idx (first-empty-action-slot-index @field)]
-                (do
-                  (swap! hand #(vec (remove #{card} %)))
-                  (swap! field update idx #(merge % {:action card}))
-                  (println (str "\n" player-name " uses: " (:name card)))
-                  (display-board
-                   (if (= player-name "BLUE") field enemy-field)
-                   (if (= player-name "BLUE") enemy-field field)
-                   n)
-                  card)
-                (do
-                  (println "No empty action/equipment slots! Choose a different card.")
-                  (recur))))))))))
+      (println "\nChoose a card to play:")
+      (if-let [choice (some-> (read-line) Integer/parseInt)]
+        (if-let [card (nth @hand (dec choice) nil)]
+          (let [[slot-key find-slot error-msg action-msg]
+                (if (:stats card)
+                  [:hero first-empty-hero-slot-index
+                   "No empty hero slots!"
+                   "plays"]
+                  [:action first-empty-action-slot-index
+                   "No empty action/equipment slots!"
+                   "uses"])]
+            (if-let [idx (find-slot @field)]
+              (do
+                (swap! hand #(vec (remove #{card} %)))
+                (swap! field update idx assoc slot-key card)
+                (println (str "\n" player-name " " action-msg ": " (:name card) "\n"))
+                (show-board)
+                card)
+              (do (println error-msg) (recur))))
+          (do (println "Invalid choice.") (recur)))
+        (do (println "Invalid input.") (recur))))))
 
 (defn draw-from-deck [deck n]
   (let [drawn (take n @deck)]
@@ -229,7 +222,7 @@
        (filter alive?)
        vec))
 
-(defn attack-phase [player-name field enemy-field]
+(defn attack-phase [player-name field enemy-field enemy-player-hp]
   (println (str "\n--- " player-name " ATTACK PHASE ---"))
   (Thread/sleep 800)
 
@@ -240,25 +233,38 @@
             defender (choose-hero defenders
                                   (if (= player-name "BLUE") "Red" "Blue")
                                   (atom #{}))]
-        (attack attacker defender)))))
+        (attack attacker defender enemy-player-hp)))))
+
+(defn print-player-hp [player-name hp]
+  (println (format "%s PLAYER HEALTH: %d HP" player-name @hp)))
 
 (defn player-turn
-  [player-name n deck hand field enemy-field can-attack? first-draw?]
+  [player-name n deck hand field enemy-field
+   player-hp enemy-player-hp
+   can-attack? first-draw?]
+
   (println "\n==============================")
   (println (str ">>> " player-name " PLAYER TURN <<<"))
-  (Thread/sleep 1000)
   (println "==============================")
+
+  (print-player-hp player-name player-hp)
+  (Thread/sleep 800)
 
   (draw-phase player-name n deck hand first-draw?)
   (Thread/sleep 400)
+
   (selection-phase player-name hand field enemy-field n)
+
   (when can-attack?
-    (attack-phase player-name field enemy-field))
-  (swap! field (fn [slots]
-                 (mapv #(dissoc % :action) slots))))
+    (attack-phase player-name field enemy-field enemy-player-hp))
+
+  (swap! field #(mapv (fn [slot] (dissoc slot :action)) %)))
 
 (defn init-field [n]
   (vec (repeat n {})))
+
+(defn initial-player-hp [n]
+  (* 300 n))
 
 (defn init-player-deck [{:keys [heroes actions equipment]}]
   (atom (shuffle (vec (concat heroes actions equipment)))))
@@ -269,15 +275,23 @@
         blue-deck  (init-player-deck blue-cards)
         red-deck   (init-player-deck red-cards)
         blue-hand  (atom [])
-        red-hand   (atom [])]
+        red-hand   (atom [])
+        blue-hp    (atom (initial-player-hp n))
+        red-hp     (atom (initial-player-hp n))]
 
-    (player-turn "BLUE" n blue-deck blue-hand blue-field red-field false true)
-    (player-turn "RED"  n red-deck  red-hand  red-field  blue-field true  true)
+    (player-turn "BLUE" n blue-deck blue-hand blue-field red-field
+                 blue-hp red-hp false true)
+
+    (player-turn "RED"  n red-deck red-hand red-field blue-field
+                 red-hp blue-hp true true)
 
     (loop []
-      (player-turn "BLUE" n blue-deck blue-hand blue-field red-field true false)
-      (player-turn "RED"  n red-deck  red-hand  red-field  blue-field true false)
-      (recur))))
+      (when (and (pos? @blue-hp) (pos? @red-hp))
+        (player-turn "BLUE" n blue-deck blue-hand blue-field red-field
+                     blue-hp red-hp true false)
+        (player-turn "RED"  n red-deck red-hand red-field blue-field
+                     red-hp blue-hp true false)
+        (recur)))))
 
 (defn select-card [player card-number selected-cards cards card-type]
   (loop []
