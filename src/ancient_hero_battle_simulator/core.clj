@@ -2,6 +2,7 @@
   (:gen-class)
   (:require [ancient-hero-battle-simulator.cards.heroes :as heroes]
             [ancient-hero-battle-simulator.cards.actions :as actions]
+            [ancient-hero-battle-simulator.cards.traps :as traps]
             [ancient-hero-battle-simulator.cards.equipment :as equipment]
             [clojure.string :as str]))
 
@@ -33,12 +34,6 @@
       (Thread/sleep 200)
       (println (str "Red Player gets: " (:name red-card)))
       (Thread/sleep 200))))
-
-(defn show-main-menu []
-  (println "\nMain Menu\n1. Fight!\n2. Create your hero\n3. Exit"))
-
-(defn show-combat-menu []
-  (println "\nSelect combat type\n1. 1v1\n2. 2v2\n3. 3v3\n4. Back to main menu"))
 
 (defn attack [attacker defender defender-player-hp]
   (let [atk-stats (:stats attacker)
@@ -100,6 +95,9 @@
     (and (:stats card) (:current-hp card))
     (format "[%s %dHP]" (:name card) @(:current-hp card))
 
+    (:trigger card)
+    "[TRAP]"
+
     :else
     (format "[%s]" (:name card))))
 
@@ -160,18 +158,13 @@
     (loop []
       (doseq [[i card] (map-indexed vector @hand)]
         (println (str (inc i) ". " (:name card) " - " (:description card))))
-
       (println "\nChoose a card to play:")
       (if-let [choice (some-> (read-line) Integer/parseInt)]
         (if-let [card (nth @hand (dec choice) nil)]
           (let [[slot-key find-slot error-msg action-msg]
                 (if (:stats card)
-                  [:hero first-empty-hero-slot-index
-                   "No empty hero slots!"
-                   "plays"]
-                  [:action first-empty-action-slot-index
-                   "No empty action/equipment slots!"
-                   "uses"])]
+                  [:hero first-empty-hero-slot-index "No empty hero slots!" "plays"]
+                  [:action first-empty-action-slot-index "No empty action/trap slots!" "places"])]
             (if-let [idx (find-slot @field)]
               (do
                 (swap! hand #(vec (remove #{card} %)))
@@ -205,7 +198,8 @@
                 (case n
                   1 3
                   2 5
-                  3 7)
+                  3 7
+                  4 9)
                 1)
         drawn (if first-draw?
                 (first-draw-with-hero deck count)
@@ -258,7 +252,15 @@
   (when can-attack?
     (attack-phase player-name field enemy-field enemy-player-hp))
 
-  (swap! field #(mapv (fn [slot] (dissoc slot :action)) %)))
+  (swap! field
+         #(mapv
+           (fn [slot]
+             (if (and (:action slot)
+                      (:type (:action slot))
+                      (not (:trigger (:action slot))))
+               (dissoc slot :action)
+               slot))
+           %)))
 
 (defn init-field [n]
   (vec (repeat n {})))
@@ -266,8 +268,8 @@
 (defn initial-player-hp [n]
   (* 300 n))
 
-(defn init-player-deck [{:keys [heroes actions equipment]}]
-  (atom (shuffle (vec (concat heroes actions equipment)))))
+(defn init-player-deck [{:keys [heroes actions traps equipment]}]
+  (atom (shuffle (vec (concat heroes actions traps equipment)))))
 
 (defn fight-cards [blue-cards red-cards n]
   (let [blue-field (atom (init-field n))
@@ -345,16 +347,24 @@
   (let [method (select-method)
         selected (atom #{})
         hero-count (* n 2)
-        action-count (+ 2 (* n 2))
+        action-count (+ 2 n)
+        trap-count (+ 2 n)
         equip-count n
         [blue-heroes red-heroes] (pick-category method mode hero-count heroes/heroes "Hero Cards" selected)
         [blue-actions red-actions] (pick-category method mode action-count actions/actions "Action Cards" selected)
+        [blue-traps red-traps] (pick-category method mode trap-count traps/traps "Trap Cards" selected)
         [blue-equipment red-equipment] (pick-category method mode equip-count equipment/equipment "Equipment Cards" selected)
-        blue-cards {:heroes (mapv init-hero blue-heroes) :actions blue-actions :equipment blue-equipment}
-        red-cards {:heroes (mapv init-hero red-heroes) :actions red-actions :equipment red-equipment}]
+        blue-cards {:heroes (mapv init-hero blue-heroes) :actions blue-actions :traps blue-traps :equipment blue-equipment}
+        red-cards {:heroes (mapv init-hero red-heroes) :actions red-actions :traps red-traps :equipment red-equipment}]
     (println "\nAll cards assigned! Starting battle...")
     (Thread/sleep 1000)
     (fight-cards blue-cards red-cards n)))
+
+(defn show-main-menu []
+  (println "\nMain Menu\n1. Fight!\n2. Create your hero\n3. Exit"))
+
+(defn show-combat-menu []
+  (println "\nSelect combat type\n1. 1v1\n2. 2v2\n3. 3v3\n4. 4v4\n5. Back to main menu"))
 
 (defn select-combat [mode]
   (loop []
@@ -363,7 +373,8 @@
       "1" (do (select-nvn mode 1) (recur))
       "2" (do (select-nvn mode 2) (recur))
       "3" (do (select-nvn mode 3) (recur))
-      "4" (println "Returning to main menu...")
+      "4" (do (select-nvn mode 4) (recur))
+      "5" (println "Returning to main menu...")
       (do (println "Invalid choice") (recur)))))
 
 (defn select-mode []

@@ -1,3 +1,5 @@
+(ns ancient-hero-battle-simulator.cards.heroes)
+
 (def heroes
   [;; --- S TIER HEROES ---
    {:id 1
@@ -112,7 +114,7 @@
             :intelligence 75}}
 
    {:id 11
-    :name "Ragnar"
+    :name "Ragnar Lothbrok"
     :description "Legendary Viking Warrior"
     :type :warrior
     :tier :a
