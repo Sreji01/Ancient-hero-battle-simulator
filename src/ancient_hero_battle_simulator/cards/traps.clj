@@ -3,6 +3,7 @@
 (def traps
   [{:id 1
     :name "Spike Pit"
+    :category :trap
     :type :damage
     :trigger :enemy-hero-placed
     :effect {:damage 20}
@@ -10,6 +11,7 @@
 
    {:id 2
     :name "Poison Gas"
+    :category :trap
     :type :damage-over-time
     :trigger :enemy-attack
     :effect {:damage-per-turn 10 :turns 3}
@@ -17,6 +19,7 @@
 
    {:id 3
     :name "Snare Trap"
+    :category :trap
     :type :control
     :trigger :enemy-hero-placed
     :effect {:stun 1}
@@ -24,6 +27,7 @@
 
    {:id 4
     :name "Exploding Runes"
+    :category :trap
     :type :damage
     :trigger :enemy-action
     :effect {:damage 30}
@@ -31,6 +35,7 @@
 
    {:id 5
     :name "Cursed Idol"
+    :category :trap
     :type :debuff
     :trigger :enemy-attack
     :effect {:reduce-power 20}
@@ -38,6 +43,7 @@
 
    {:id 6
     :name "Crippling Guard"
+    :category :trap
     :type :debuff
     :trigger :enemy-attack
     :effect {:reduce-defense 20}
@@ -45,6 +51,7 @@
 
    {:id 7
     :name "Fatigue Curse"
+    :category :trap
     :type :debuff
     :trigger :enemy-attack
     :effect {:reduce-agility 20}
@@ -52,6 +59,7 @@
 
    {:id 8
     :name "Weaken Mind"
+    :category :trap
     :type :debuff
     :trigger :enemy-attack
     :effect {:reduce-intelligence 20}
@@ -59,6 +67,7 @@
 
    {:id 9
     :name "Siphon Vitality"
+    :category :trap
     :type :debuff
     :trigger :enemy-attack
     :effect {:reduce-health 20}
@@ -66,6 +75,7 @@
 
    {:id 10
     :name "Mirror Trap"
+    :category :trap
     :type :reflect
     :trigger :enemy-attack
     :effect {:reflect-damage 15}
@@ -73,6 +83,7 @@
 
    {:id 11
     :name "Trap of Confusion"
+    :category :trap
     :type :control
     :trigger :enemy-hero-placed
     :effect {:swap-position true}
@@ -80,6 +91,7 @@
 
    {:id 12
     :name "Magic Barrier"
+    :category :trap
     :type :utility
     :trigger :enemy-attack
     :effect {:absorb-damage 20}
@@ -87,6 +99,7 @@
 
    {:id 13
     :name "Action Mirror"
+    :category :trap
     :type :reflect
     :trigger :enemy-action
     :effect {:copy-action true}
@@ -94,6 +107,7 @@
 
    {:id 14
     :name "Action Jammer"
+    :category :trap
     :type :control
     :trigger :enemy-action
     :effect {:negate-action true}
@@ -101,6 +115,7 @@
 
    {:id 15
     :name "Battle Frenzy"
+    :category :trap
     :type :buff
     :trigger :player-attack
     :effect {:increase-health 10
@@ -112,6 +127,7 @@
 
    {:id 16
     :name "Defender's Mirror"
+    :category :trap
     :type :control
     :trigger :enemy-attack
     :effect {:swap-with-defender true}

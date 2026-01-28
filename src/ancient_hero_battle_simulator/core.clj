@@ -20,9 +20,13 @@
 
 (defn list-cards [cards selected-cards]
   (doseq [card (remove #(contains? @selected-cards (:id %)) cards)]
-    (let [tier-info (when (:tier card) (str "[" (str/upper-case (name (:tier card))) " Tier] "))
-          type-info (when (and (:type card) (not (:tier card))) (str "[" (str/capitalize (name (:type card))) "] "))]
-      (println (str (:id card) ". " tier-info type-info (:name card) " - " (:description card))))))
+    (let [tier-info (when (and (:tier card) (= (:category card) :hero))
+                      (str "[" (-> (:category card) name str/capitalize)
+                           " " (-> (:tier card) name str/upper-case) "-Tier] "))
+          type-info (when (and (:type card) (not (:tier card)) (not= (:category card) :hero))
+                      (str "[" (-> (:type card) name str/capitalize) "] "))]
+      (println (str (:id card) ". " (or tier-info type-info) (:name card) " - " (:description card))))))
+
 
 (defn announce-random-picks [blue-picks red-picks type]
   (println (format "\n--- Randomly assigning %s ---" type))
@@ -146,35 +150,85 @@
         i))
     field)))
 
+(defn card-type [card]
+  (:category card))
+
+(defn format-card [card]
+  (cond
+    (= (:category card) :hero)
+    (str "[Hero " (-> (:tier card) name str/upper-case) "-Tier] "
+         (:name card) " - " (:description card))
+
+    (= (:category card) :equipment)
+    (str "[Equipment " (-> (:tier card) name str/upper-case) "-Tier] "
+         (:name card) " - " (:description card))
+
+    (= (:category card) :action)
+    (str "[Action] " (:name card) " - " (:description card))
+
+    (= (:category card) :trap)
+    (str "[Trap] " (:name card) " - " (:description card))
+
+    :else
+    (:name card)))
+
+(def category-priority
+  {:hero 0
+   :action 1
+   :trap 2
+   :equipment 3})
+
 (defn selection-phase
   [player-name hand field enemy-field n]
-  (println (str "\n--- " player-name " SELECTION PHASE ---"))
-  (Thread/sleep 1000)
+  (println (str "\n--- " player-name " SELECTION PHASE ---\n"))
+  (Thread/sleep 800)
 
   (let [show-board #(display-board
                      (if (= player-name "BLUE") field enemy-field)
                      (if (= player-name "BLUE") enemy-field field)
                      n)]
-    (loop []
-      (doseq [[i card] (map-indexed vector @hand)]
-        (println (str (inc i) ". " (:name card) " - " (:description card))))
-      (println "\nChoose a card to play:")
-      (if-let [choice (some-> (read-line) Integer/parseInt)]
-        (if-let [card (nth @hand (dec choice) nil)]
-          (let [[slot-key find-slot error-msg action-msg]
-                (if (:stats card)
-                  [:hero first-empty-hero-slot-index "No empty hero slots!" "plays"]
-                  [:action first-empty-action-slot-index "No empty action/trap slots!" "places"])]
-            (if-let [idx (find-slot @field)]
-              (do
-                (swap! hand #(vec (remove #{card} %)))
-                (swap! field update idx assoc slot-key card)
-                (println (str "\n" player-name " " action-msg ": " (:name card) "\n"))
-                (show-board)
-                card)
-              (do (println error-msg) (recur))))
-          (do (println "Invalid choice.") (recur)))
-        (do (println "Invalid input.") (recur))))))
+    (show-board)
+    (loop [used-types #{}]
+      (let [playable-cards
+            (->> @hand
+                 (filter #(not (contains? used-types (card-type %))))
+                 (sort-by #(get category-priority (:category %) 99))
+                 vec)]
+        (when (seq playable-cards)
+          (println "Choose a card to play:")
+          (doseq [[i card] (map-indexed vector playable-cards)]
+            (println (str (inc i) ". " (format-card card))))
+          (println (str (inc (count playable-cards)) ". End Selection Phase"))
+
+          (if-let [choice (try (Integer/parseInt (read-line))
+                               (catch NumberFormatException _ nil))]
+            (cond
+              (= choice (inc (count playable-cards)))
+              (println "\nEnding selection phase...")
+
+              (and (>= choice 1) (<= choice (count playable-cards)))
+              (let [card (nth playable-cards (dec choice))
+                    ctype (card-type card)
+                    [slot-key find-slot error-msg action-msg]
+                    (case ctype
+                      :hero      [:hero first-empty-hero-slot-index "No empty hero slots!" "plays"]
+                      :action    [:action first-empty-action-slot-index "No empty action slots!" "places"]
+                      :trap      [:action first-empty-action-slot-index "No empty trap slots!" "places"]
+                      :equipment [:action first-empty-action-slot-index "No empty equipment slots!" "equips"])]
+                (if-let [idx (find-slot @field)]
+                  (do
+                    (swap! hand #(vec (remove #{card} %)))
+                    (swap! field update idx assoc slot-key card)
+                    (println (str "\n" player-name " " action-msg ": " (format-card card) "\n"))
+                    (show-board)
+                    (recur (conj used-types ctype)))
+                  (do
+                    (println error-msg)
+                    (recur used-types))))
+
+              :else
+              (do (println "Invalid choice.") (recur used-types)))
+            (do (println "Invalid input.") (recur used-types))))))))
 
 (defn draw-from-deck [deck n]
   (let [drawn (take n @deck)]
@@ -229,7 +283,7 @@
             (println "\nSelect a hero to attack:")
             (doseq [[idx hero] (map-indexed vector available-attackers)]
               (println (str (inc idx) ". " (:name hero) " " @(:current-hp hero) " HP")))
-            (println (str (inc (count available-attackers)) ". End Phase"))
+            (println (str (inc (count available-attackers)) ". End Attack Phase"))
 
             (if-let [input (try (Integer/parseInt (read-line))
                                 (catch NumberFormatException _ nil))]
