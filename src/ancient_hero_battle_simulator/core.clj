@@ -70,7 +70,7 @@
           (do (println "Invalid choice.") (recur)))
         (do (println "Invalid input.") (recur))))))
 
-(defn choose-combatants [blue-team red-team attacked-heroes defended-heroes]
+#_(defn choose-combatants [blue-team red-team attacked-heroes defended-heroes]
   (let [attacker (choose-hero blue-team "Blue" attacked-heroes)]
     (println (:name attacker) " selected to attack!")
     (let [defender (choose-hero red-team "Red" defended-heroes)]
@@ -220,14 +220,36 @@
   (println (str "\n--- " player-name " ATTACK PHASE ---"))
   (Thread/sleep 800)
 
-  (let [attackers (heroes-on-field @field)
-        defenders (heroes-on-field @enemy-field)]
-    (when (and (seq attackers) (seq defenders))
-      (let [attacker (choose-hero attackers player-name (atom #{}))
-            defender (choose-hero defenders
-                                  (if (= player-name "BLUE") "Red" "Blue")
-                                  (atom #{}))]
-        (attack attacker defender enemy-player-hp)))))
+  (loop [available-attackers (heroes-on-field @field)]
+    (when (seq available-attackers)
+      (let [defenders (heroes-on-field @enemy-field)]
+        (if (empty? defenders)
+          (println "No enemies to attack!")
+          (do
+            (println "\nSelect a hero to attack:")
+            (doseq [[idx hero] (map-indexed vector available-attackers)]
+              (println (str (inc idx) ". " (:name hero) " " @(:current-hp hero) " HP")))
+            (println (str (inc (count available-attackers)) ". End Phase"))
+
+            (if-let [input (try (Integer/parseInt (read-line))
+                                (catch NumberFormatException _ nil))]
+              (cond
+                (= input (inc (count available-attackers)))
+                (println "\nEnding attack phase...")
+
+                (and (>= input 1) (<= input (count available-attackers)))
+                (let [attacker (nth available-attackers (dec input))
+                      defender (choose-hero defenders
+                                            (if (= player-name "BLUE") "Red" "Blue")
+                                            (atom #{}))]
+                  (attack attacker defender enemy-player-hp)
+                  (recur (vec (remove #(= (:id %) (:id attacker)) available-attackers))))
+
+                :else
+                (do (println "Invalid choice.") (recur available-attackers)))
+
+              (do (println "Invalid input.") (recur available-attackers)))))))))
+
 
 (defn print-player-hp [player-name hp]
   (println (format "%s PLAYER HEALTH: %d HP" player-name @hp)))
