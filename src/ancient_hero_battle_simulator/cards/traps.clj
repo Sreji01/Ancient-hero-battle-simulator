@@ -7,7 +7,7 @@
     :type :damage
     :trigger :enemy-hero-placed
     :effect {:damage 20}
-    :description "Activates when an enemy hero is placed: Deal 20 damage."}
+    :description "Deal 20 damage to a placed hero."}
 
    {:id 2
     :name "Poison Gas"
@@ -20,7 +20,7 @@
    {:id 3
     :name "Snare Trap"
     :category :trap
-    :type :control
+    :type :stun
     :trigger :enemy-hero-placed
     :effect {:stun 1}
     :description "Stun enemy hero for 1 turn when they are placed."}
@@ -31,7 +31,7 @@
     :type :damage
     :trigger :enemy-action
     :effect {:damage 30}
-    :description "Trigger when enemy plays an action: Deal 30 damage to them."}
+    :description "Deal 30 damage to an enemy player when he playes an action."}
 
    {:id 5
     :name "Cursed Idol"
