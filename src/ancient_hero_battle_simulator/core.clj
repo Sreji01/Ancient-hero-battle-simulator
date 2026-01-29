@@ -178,56 +178,113 @@
    :trap 2
    :equipment 3})
 
-(defn selection-phase
-  [player-name hand field enemy-field n]
+(defn heroes-on-field [field]
+  (->> field
+       (map :hero)
+       (filter some?)
+       (filter alive?)
+       vec))
+
+(defn apply-damage-effect [card enemy-field enemy-player-hp]
+  (let [effect (:effect card)]
+    (cond
+      (:damage effect)
+      (let [defenders (heroes-on-field @enemy-field)]
+        (if (seq defenders)
+          (let [target (choose-hero defenders "Target Enemy" (atom #{}))
+                dmg (:damage effect)]
+            (swap! (:current-hp target) #(max 0 (- % dmg)))
+            (println (format "[DAMAGE] %s deals %d damage to %s!\n"
+                             (:name card) dmg (:name target))))
+          (println "\nNo enemies to target! Effect wasted.")))
+
+      (:damage-all-enemies effect)
+      (let [defenders (heroes-on-field @enemy-field)
+            dmg (:damage-all-enemies effect)]
+        (doseq [target defenders]
+          (swap! (:current-hp target) #(max 0 (- % dmg))))
+        (println (format "[AOE] %s deals %d damage to ALL enemy heroes!\n"
+                         (:name card) dmg)))
+
+      (:player-damage effect)
+      (let [dmg (:player-damage effect)]
+        (swap! enemy-player-hp #(max 0 (- % dmg)))
+        (println (format "[DIRECT] %s deals %d damage to the enemy player!\n"
+                         (:name card) dmg))))))
+
+(defn apply-action-effect [card field enemy-field enemy-player-hp]
+  (let [type (:type card)]
+    (case type
+      :attack (apply-damage-effect card enemy-field enemy-player-hp)
+
+      :defense (println "Defense effects coming soon...\n")
+
+      :heal (println "Healing effects coming soon...\n")
+
+      :buff (println "Buff effecst coming soon...\n")
+      
+      :utility (println "Utility effects coming soon...\n")
+
+      (println (format "Effect for type %s is not yet implemented." type)))))
+
+(defn get-slot-config [ctype]
+  (case ctype
+    :hero      {:key :hero :finder first-empty-hero-slot-index :msg "plays" :err "No empty hero slots!"}
+    :action    {:key :action :finder first-empty-action-slot-index :msg "plays" :err "No empty action slots!"}
+    :trap      {:key :action :finder first-empty-action-slot-index :msg "places" :err "No empty trap slots!"}
+    :equipment {:key :action :finder first-empty-action-slot-index :msg "equips" :err "No empty equipment slots!"}))
+
+(defn execute-card-play! [card hand field enemy-field enemy-player-hp player-name]
+  (let [ctype (card-type card)
+        {:keys [key finder msg err]} (get-slot-config ctype)
+        idx (finder @field)]
+    (if idx
+      (let [display-name (if (= ctype :trap) "TRAP" (:name card))]
+        (println (format "\n%s %s: %s\n" player-name msg display-name))
+
+        (swap! hand (fn [curr] (vec (remove #(= (:id %) (:id card)) curr))))
+
+        (when (= ctype :action)
+          (apply-action-effect card field enemy-field enemy-player-hp))
+
+        (swap! field update idx assoc key card)
+        {:success true})
+      {:success false :err err})))
+
+(defn selection-phase [player-name hand field enemy-field enemy-player-hp n]
   (println (str "\n--- " player-name " SELECTION PHASE ---\n"))
   (Thread/sleep 800)
-
   (let [show-board #(display-board
                      (if (= player-name "BLUE") field enemy-field)
-                     (if (= player-name "BLUE") enemy-field field)
-                     n)]
+                     (if (= player-name "BLUE") enemy-field field) n)]
     (show-board)
     (loop [used-types #{}]
-      (let [playable-cards
-            (->> @hand
-                 (filter #(not (contains? used-types (card-type %))))
-                 (sort-by #(get category-priority (:category %) 99))
-                 vec)]
-        (when (seq playable-cards)
+      (let [playable (->> @hand
+                          (filter #(not (contains? used-types (card-type %))))
+                          (sort-by #(get category-priority (:category %) 99))
+                          vec)]
+        (when (seq playable)
           (println "Choose a card to play:")
-          (doseq [[i card] (map-indexed vector playable-cards)]
+          (doseq [[i card] (map-indexed vector playable)]
             (println (str (inc i) ". " (format-card card))))
-          (println (str (inc (count playable-cards)) ". End Selection Phase"))
+          (println (str (inc (count playable)) ". End Selection Phase"))
 
-          (if-let [choice (try (Integer/parseInt (read-line))
-                               (catch NumberFormatException _ nil))]
+          (if-let [choice (try (Integer/parseInt (read-line)) (catch Exception _ nil))]
             (cond
-              (= choice (inc (count playable-cards)))
+              (= choice (inc (count playable)))
               (println "\nEnding selection phase...")
 
-              (and (>= choice 1) (<= choice (count playable-cards)))
-              (let [card (nth playable-cards (dec choice))
-                    ctype (card-type card)
-                    [slot-key find-slot error-msg action-msg]
-                    (case ctype
-                      :hero      [:hero first-empty-hero-slot-index "No empty hero slots!" "plays"]
-                      :action    [:action first-empty-action-slot-index "No empty action slots!" "places"]
-                      :trap      [:action first-empty-action-slot-index "No empty trap slots!" "places"]
-                      :equipment [:action first-empty-action-slot-index "No empty equipment slots!" "equips"])]
-                (if-let [idx (find-slot @field)]
+              (and (>= choice 1) (<= choice (count playable)))
+              (let [card (nth playable (dec choice))
+                    result (execute-card-play! card hand field enemy-field enemy-player-hp player-name)]
+                (if (:success result)
                   (do
-                    (swap! hand #(vec (remove #{card} %)))
-                    (swap! field update idx assoc slot-key card)
-                    (println (str "\n" player-name " " action-msg ": " (format-card card) "\n"))
+                    (Thread/sleep 1000)
                     (show-board)
-                    (recur (conj used-types ctype)))
-                  (do
-                    (println error-msg)
-                    (recur used-types))))
+                    (recur (conj used-types (card-type card))))
+                  (do (println (:err result)) (recur used-types))))
 
-              :else
-              (do (println "Invalid choice.") (recur used-types)))
+              :else (do (println "Invalid choice.") (recur used-types)))
             (do (println "Invalid input.") (recur used-types))))))))
 
 (defn draw-from-deck [deck n]
@@ -262,13 +319,6 @@
       (Thread/sleep 500)
       (println (str player-name " draws: " (:name card)))
       (swap! hand conj card))))
-
-(defn heroes-on-field [field]
-  (->> field
-       (map :hero)
-       (filter some?)
-       (filter alive?)
-       vec))
 
 (defn attack-phase [player-name field enemy-field enemy-player-hp]
   (println (str "\n--- " player-name " ATTACK PHASE ---"))
@@ -323,17 +373,18 @@
   (draw-phase player-name n deck hand first-draw?)
   (Thread/sleep 400)
 
-  (selection-phase player-name hand field enemy-field n)
+  ;; Prosleđujemo enemy-player-hp ovde:
+  (selection-phase player-name hand field enemy-field enemy-player-hp n)
 
   (when can-attack?
     (attack-phase player-name field enemy-field enemy-player-hp))
 
+  ;; Čišćenje iskorišćenih akcija sa table na kraju poteza
   (swap! field
          #(mapv
            (fn [slot]
              (if (and (:action slot)
-                      (:type (:action slot))
-                      (not (:trigger (:action slot))))
+                      (= (:category (:action slot)) :action)) ;; Provera kategorije
                (dissoc slot :action)
                slot))
            %)))

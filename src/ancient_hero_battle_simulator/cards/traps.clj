@@ -1,7 +1,7 @@
 (ns ancient-hero-battle-simulator.cards.traps)
 
 (def traps
-  [{:id 1
+  [{:id 301
     :name "Spike Pit"
     :category :trap
     :type :damage
@@ -9,7 +9,7 @@
     :effect {:damage 20}
     :description "Deal 20 damage to a placed hero."}
 
-   {:id 2
+   {:id 302
     :name "Poison Gas"
     :category :trap
     :type :damage-over-time
@@ -17,7 +17,7 @@
     :effect {:damage-per-turn 10 :turns 3}
     :description "Deal 10 damage to attacking hero per turn for 3 turns."}
 
-   {:id 3
+   {:id 303
     :name "Snare Trap"
     :category :trap
     :type :stun
@@ -25,7 +25,7 @@
     :effect {:stun 1}
     :description "Stun enemy hero for 1 turn when they are placed."}
 
-   {:id 4
+   {:id 304
     :name "Exploding Runes"
     :category :trap
     :type :damage
@@ -33,7 +33,7 @@
     :effect {:damage 30}
     :description "Deal 30 damage to an enemy player when he playes an action."}
 
-   {:id 5
+   {:id 305
     :name "Cursed Idol"
     :category :trap
     :type :debuff
@@ -41,7 +41,7 @@
     :effect {:reduce-power 20}
     :description "Reduce the attacking hero's power by 20 for one turn."}
 
-   {:id 6
+   {:id 306
     :name "Crippling Guard"
     :category :trap
     :type :debuff
@@ -49,7 +49,7 @@
     :effect {:reduce-defense 20}
     :description "Reduce the attacking hero's defense by 20 for one turn."}
 
-   {:id 7
+   {:id 307
     :name "Fatigue Curse"
     :category :trap
     :type :debuff
@@ -57,7 +57,7 @@
     :effect {:reduce-agility 20}
     :description "Reduce the attacking hero's agility by 20 for one turn."}
 
-   {:id 8
+   {:id 308
     :name "Weaken Mind"
     :category :trap
     :type :debuff
@@ -65,7 +65,7 @@
     :effect {:reduce-intelligence 20}
     :description "Reduce the attacking hero's intelligence by 20 for one turn."}
 
-   {:id 9
+   {:id 309
     :name "Siphon Vitality"
     :category :trap
     :type :debuff
@@ -73,7 +73,7 @@
     :effect {:reduce-health 20}
     :description "Reduce the attacking hero's health by 20 for one turn."}
 
-   {:id 10
+   {:id 310
     :name "Mirror Trap"
     :category :trap
     :type :reflect
@@ -81,7 +81,7 @@
     :effect {:reflect-damage 15}
     :description "Reflect 15 damage back to the attacker."}
 
-   {:id 11
+   {:id 311
     :name "Trap of Confusion"
     :category :trap
     :type :control
@@ -89,7 +89,7 @@
     :effect {:swap-position true}
     :description "Take control of an enemy hero when they are placed for 1 turn."}
 
-   {:id 12
+   {:id 312
     :name "Magic Barrier"
     :category :trap
     :type :utility
@@ -97,7 +97,7 @@
     :effect {:absorb-damage 20}
     :description "Absorb 20 damage from the next attack."}
 
-   {:id 13
+   {:id 313
     :name "Action Mirror"
     :category :trap
     :type :reflect
@@ -105,7 +105,7 @@
     :effect {:copy-action true}
     :description "When the enemy plays an action, copy it and play it against them immediately."}
 
-   {:id 14
+   {:id 314
     :name "Action Jammer"
     :category :trap
     :type :control
@@ -113,7 +113,7 @@
     :effect {:negate-action true}
     :description "Negates the next action played by the enemy"}
 
-   {:id 15
+   {:id 315
     :name "Battle Frenzy"
     :category :trap
     :type :buff
@@ -125,7 +125,7 @@
              :increase-intelligence 10}
     :description "Activates when you attack: Increase all your hero's stats by 10 for one turn."}
 
-   {:id 16
+   {:id 316
     :name "Defender's Mirror"
     :category :trap
     :type :control

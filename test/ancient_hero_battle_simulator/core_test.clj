@@ -1,14 +1,44 @@
 (ns ancient-hero-battle-simulator.core-test
-  (:require [midje.sweet :refer :all]
-            [ancient-hero-battle-simulator.core :refer :all]))
+  (:require [midje.sweet :refer [fact facts =>]]
+            [clojure.core :refer [with-redefs]]
+            [ancient-hero-battle-simulator.core :as core]
+            [ancient-hero-battle-simulator.cards.actions :as card-actions]))
 
 (facts "Hero life state"
-
        (fact "hero is alive when hp > 0"
-             (alive? {:current-hp (atom 10)}) => true)
+             (core/alive? {:current-hp (atom 10)}) => true)
 
        (fact "hero is dead when hp is 0"
-             (dead? {:current-hp (atom 0)}) => true)
+             (core/dead? {:current-hp (atom 0)}) => true)
 
        (fact "dead hero is not alive"
-             (alive? {:current-hp (atom 0)}) => false))
+             (core/alive? {:current-hp (atom 0)}) => false))
+
+(fact "Assassinate deals direct damage to enemy player HP"
+      (let [enemy-hp (atom 100)
+            assassinate (first (filter #(= (:name %) "Assassinate") card-actions/actions))]
+        (core/apply-damage-effect assassinate (atom []) enemy-hp)
+        @enemy-hp => 70))
+
+(fact "Battle Surge deals AOE damage to all enemy heroes"
+      (let [hero1 {:name "H1" :current-hp (atom 80)}
+            hero2 {:name "H2" :current-hp (atom 50)}
+            enemy-field (atom [{:hero hero1} {:hero hero2}])
+            enemy-hp (atom 200)
+            battle-surge (first (filter #(= (:name %) "Battle Surge") card-actions/actions))]
+        (core/apply-damage-effect battle-surge enemy-field enemy-hp)
+        @(:current-hp hero1) => 70
+        @(:current-hp hero2) => 40
+        @enemy-hp => 200))
+
+(fact "Power Strike deals targeted damage to a single enemy hero"
+      (let [hero1 {:name "H1" :current-hp (atom 50)}
+            hero2 {:name "H2" :current-hp (atom 50)}
+            enemy-field (atom [{:hero hero1} {:hero hero2}])
+            enemy-hp (atom 200)
+            power-strike (first (filter #(= (:name %) "Power Strike") card-actions/actions))]
+        (with-redefs [read-line (fn [] "1")]
+          (core/apply-damage-effect power-strike enemy-field enemy-hp))
+        @(:current-hp hero1) => 25
+        @(:current-hp hero2) => 50
+        @enemy-hp => 200))
