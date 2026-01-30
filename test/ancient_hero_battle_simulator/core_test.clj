@@ -42,3 +42,33 @@
         @(:current-hp hero1) => 25
         @(:current-hp hero2) => 50
         @enemy-hp => 200))
+
+(fact "Heal restores 30 HP to a selected ally hero"
+      (let [hero {:name "H1"
+                  :stats {:health 100}
+                  :current-hp (atom 40)}
+            field (atom [{:hero hero}])
+            heal (first (filter #(= (:name %) "Heal")
+                                card-actions/actions))]
+
+        (with-redefs [read-line (fn [] "1")]
+          (core/apply-heal-effect heal field))
+
+        @(:current-hp hero) => 70
+        ))
+
+(fact "Divine Favor restores HP to all allied heroes"
+      (let [hero1 {:name "H1"
+                   :stats {:health 100}
+                   :current-hp (atom 50)}
+            hero2 {:name "H2"
+                   :stats {:health 80}
+                   :current-hp (atom 75)}
+            field (atom [{:hero hero1} {:hero hero2}])
+            divine-favor (first (filter #(= (:name %) "Divine Favor")
+                                        card-actions/actions))]
+
+        (core/apply-heal-effect divine-favor field)
+
+        @(:current-hp hero1) => 60   ;
+        @(:current-hp hero2) => 80)) ; 

@@ -212,6 +212,37 @@
         (println (format "[DIRECT] %s deals %d damage to the enemy player!\n"
                          (:name card) dmg))))))
 
+(defn heal-hero! [hero amount]
+  (let [max-hp (get-in hero [:stats :health])]
+    (swap! (:current-hp hero)
+           #(min max-hp (+ % amount)))))
+
+
+(defn apply-heal-effect [card field]
+  (let [effect (:effect card)
+        allies (heroes-on-field @field)]
+    (cond
+      (:restore effect)
+      (if (seq allies)
+        (let [target (choose-hero allies "Your Hero to Heal" (atom #{}))
+              heal (:restore effect)]
+          (heal-hero! target heal)
+          (println
+           (format "[HEAL] %s restores %d HP to %s!\n"
+                   (:name card) heal (:name target))))
+        (println "\nNo allies to heal!"))
+
+      (:restore-all-allies effect)
+      (let [heal (:restore-all-allies effect)]
+        (doseq [hero allies]
+          (heal-hero! hero heal))
+        (println
+         (format "[AOE HEAL] %s restores %d HP to ALL allies!\n"
+                 (:name card) heal)))
+
+      :else
+      (println "Unknown heal effect."))))
+
 (defn apply-action-effect [card field enemy-field enemy-player-hp]
   (let [type (:type card)]
     (case type
@@ -219,7 +250,7 @@
 
       :defense (println "Defense effects coming soon...\n")
 
-      :heal (println "Healing effects coming soon...\n")
+      :heal (apply-heal-effect card field)
 
       :buff (println "Buff effecst coming soon...\n")
       
@@ -373,18 +404,16 @@
   (draw-phase player-name n deck hand first-draw?)
   (Thread/sleep 400)
 
-  ;; Prosleđujemo enemy-player-hp ovde:
   (selection-phase player-name hand field enemy-field enemy-player-hp n)
 
   (when can-attack?
     (attack-phase player-name field enemy-field enemy-player-hp))
 
-  ;; Čišćenje iskorišćenih akcija sa table na kraju poteza
   (swap! field
          #(mapv
            (fn [slot]
              (if (and (:action slot)
-                      (= (:category (:action slot)) :action)) ;; Provera kategorije
+                      (= (:category (:action slot)) :action))
                (dissoc slot :action)
                slot))
            %)))

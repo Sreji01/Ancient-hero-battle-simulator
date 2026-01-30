@@ -27,7 +27,7 @@
     :category :action
     :type :defense
     :effect {:reduce-damage-all-enemies 10}
-    :description "Reduce all damage taken by 10."}
+    :description "Reduce all damage taken by 10 for one turn."}
 
    {:id 205
     :name "Dodge Roll"
@@ -41,7 +41,7 @@
     :category :action
     :type :defense
     :effect {:reduce-damage 25}
-    :description "Reduce damage taken by a hero by 25."}
+    :description "Reduce damage taken by a selected hero by 25 for one turn."}
 
    {:id 207
     :name "Heal"
