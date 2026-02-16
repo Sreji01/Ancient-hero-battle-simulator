@@ -22,7 +22,7 @@
             enemy-hp (atom 200)
             power-strike (first (filter #(= (:name %) "Power Strike") card-actions/actions))]
         (with-redefs [read-line (fn [] "1")]
-          (logic/apply-damage-effect power-strike enemy-field enemy-hp))
+          (logic/apply-damage-effect! power-strike enemy-field enemy-hp))
         @(:current-hp hero1) => 25
         @(:current-hp hero2) => 50
         @enemy-hp => 200))
@@ -33,7 +33,7 @@
             enemy-field (atom [{:hero hero1} {:hero hero2}])
             enemy-hp (atom 200)
             battle-surge (first (filter #(= (:name %) "Battle Surge") card-actions/actions))]
-        (logic/apply-damage-effect battle-surge enemy-field enemy-hp)
+        (logic/apply-damage-effect! battle-surge enemy-field enemy-hp)
         @(:current-hp hero1) => 70
         @(:current-hp hero2) => 40
         @enemy-hp => 200))
@@ -41,35 +41,87 @@
 (fact "Assassinate deals direct damage to enemy player HP"
       (let [enemy-hp (atom 100)
             assassinate (first (filter #(= (:name %) "Assassinate") card-actions/actions))]
-        (logic/apply-damage-effect assassinate (atom []) enemy-hp)
+        (logic/apply-damage-effect! assassinate (atom []) enemy-hp)
         @enemy-hp => 70))
 
 (fact "Heal restores 30 HP to a selected ally hero"
-      (let [hero {:name "H1"
-                  :stats {:health 100}
-                  :current-hp (atom 40)}
+      (let [hero {:name "H1" :stats {:health 100} :current-hp (atom 40)}
             field (atom [{:hero hero}])
-            heal (first (filter #(= (:name %) "Heal")
-                                card-actions/actions))]
-
+            heal (first (filter #(= (:name %) "Heal") card-actions/actions))]
         (with-redefs [read-line (fn [] "1")]
-          (logic/apply-heal-effect heal field))
-
-        @(:current-hp hero) => 70
-        ))
+          (logic/apply-heal-effect! heal field))
+        @(:current-hp hero) => 70))
 
 (fact "Divine Favor restores HP to all allied heroes"
-      (let [hero1 {:name "H1"
-                   :stats {:health 100}
-                   :current-hp (atom 50)}
-            hero2 {:name "H2"
-                   :stats {:health 80}
-                   :current-hp (atom 75)}
+      (let [hero1 {:name "H1" :stats {:health 100} :current-hp (atom 50)}
+            hero2 {:name "H2" :stats {:health 80} :current-hp (atom 75)}
             field (atom [{:hero hero1} {:hero hero2}])
-            divine-favor (first (filter #(= (:name %) "Divine Favor")
-                                        card-actions/actions))]
+            divine-favor (first (filter #(= (:name %) "Divine Favor") card-actions/actions))]
+        (logic/apply-heal-effect! divine-favor field)
+        @(:current-hp hero1) => 60
+        @(:current-hp hero2) => 80))
 
-        (logic/apply-heal-effect divine-favor field)
+(fact "Vital Surge increases hero health by 20"
+      (let [hero {:name "H1"
+                  :current-hp (atom 100)
+                  :current-stats (atom {:health 100 :defense 10 :power 20 :intelligence 5 :agility 5})}
+            field (atom [{:hero hero}])
+            vital-surge {:name "Vital Surge"
+                         :type :buff
+                         :category :action
+                         :effect {:increase-health 20}}]
+        (with-redefs [read-line (fn [] "1")]
+          (logic/apply-buff-effect! vital-surge field))
+        (get @(:current-stats hero) :health) => 120))
 
-        @(:current-hp hero1) => 60   ;
-        @(:current-hp hero2) => 80)) ; 
+(fact "Iron Resolve increases hero defense by 20"
+      (let [hero {:name "H1"
+                  :current-hp (atom 100)
+                  :current-stats (atom {:health 100 :defense 30 :power 20 :intelligence 5 :agility 5})}
+            field (atom [{:hero hero}])
+            iron-resolve {:name "Iron Resolve"
+                          :type :buff
+                          :category :action
+                          :effect {:increase-defense 20}}]
+        (with-redefs [read-line (fn [] "1")]
+          (logic/apply-buff-effect! iron-resolve field))
+        (get @(:current-stats hero) :defense) => 50))
+
+(fact "Overpower increases hero power by 20"
+      (let [hero {:name "H1"
+                  :current-hp (atom 100)
+                  :current-stats (atom {:health 100 :defense 10 :power 50 :intelligence 5 :agility 5})}
+            field (atom [{:hero hero}])
+            overpower {:name "Overpower"
+                       :type :buff
+                       :category :action
+                       :effect {:increase-power 20}}]
+        (with-redefs [read-line (fn [] "1")]
+          (logic/apply-buff-effect! overpower field))
+        (get @(:current-stats hero) :power) => 70))
+
+(fact "Battle Insight increases hero intelligence by 20"
+      (let [hero {:name "H1"
+                  :current-hp (atom 100)
+                  :current-stats (atom {:health 100 :defense 10 :power 20 :intelligence 10 :agility 5})}
+            field (atom [{:hero hero}])
+            battle-insight {:name "Battle Insight"
+                            :type :buff
+                            :category :action
+                            :effect {:increase-intelligence 20}}]
+        (with-redefs [read-line (fn [] "1")]
+          (logic/apply-buff-effect! battle-insight field))
+        (get @(:current-stats hero) :intelligence) => 30))
+
+(fact "Adrenal Rush increases hero agility by 20"
+      (let [hero {:name "H1"
+                  :current-hp (atom 100)
+                  :current-stats (atom {:health 100 :defense 10 :power 20 :intelligence 5 :agility 20})}
+            field (atom [{:hero hero}])
+            adrenal-rush {:name "Adrenal Rush"
+                          :type :buff
+                          :category :action
+                          :effect {:increase-agility 20}}]
+        (with-redefs [read-line (fn [] "1")]
+          (logic/apply-buff-effect! adrenal-rush field))
+        (get @(:current-stats hero) :agility) => 40))

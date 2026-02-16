@@ -127,22 +127,34 @@
   (Thread/sleep 400)
   (selection-phase player-name hand field enemy-field enemy-player-hp n)
   (when can-attack?
-    (attack-phase player-name field enemy-field enemy-player-hp))
-  (state/clear-action-slots! field))
+    (attack-phase player-name field enemy-field enemy-player-hp)))
+
+(defn end-round! [game-state]
+  (let [{:keys [blue red]} game-state]
+    (state/clear-action-slots! (:field blue))
+    (state/clear-action-slots! (:field red))
+    (state/reset-current-stats! (:field blue))
+    (state/reset-current-stats! (:field red))))
 
 (defn regular-round [game-state]
   (let [{:keys [blue red n]} game-state]
     (player-turn "BLUE" n (:deck blue) (:hand blue) (:field blue) (:field red)
                  (:hp blue) (:hp red) true false)
+
     (player-turn "RED" n (:deck red) (:hand red) (:field red) (:field blue)
-                 (:hp red) (:hp blue) true false)))
+                 (:hp red) (:hp blue) true false)
+
+    (end-round! game-state)))
 
 (defn first-round [game-state]
   (let [{:keys [blue red n]} game-state]
     (player-turn "BLUE" n (:deck blue) (:hand blue) (:field blue) (:field red)
                  (:hp blue) (:hp red) false true)
+
     (player-turn "RED" n (:deck red) (:hand red) (:field red) (:field blue)
-                 (:hp red) (:hp blue) true true)))
+                 (:hp red) (:hp blue) true true)
+
+    (end-round! game-state)))
 
 (defn game-loop [game-state]
   (let [{:keys [blue red]} game-state]

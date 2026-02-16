@@ -2,11 +2,6 @@
   (:require [ancient-hero-battle-simulator.game.ui :as ui]
             [ancient-hero-battle-simulator.game.game-state :as state]))
 
-(defn heal-hero! [hero amount]
-  (let [max-hp (get-in hero [:stats :health])]
-    (swap! (:current-hp hero)
-           #(min max-hp (+ % amount)))))
-
 (defn read-choice [max]
   (if-let [input (try (Integer/parseInt (read-line)) (catch Exception _ nil))]
     (when (and (>= input 1) (<= input max))
@@ -20,9 +15,48 @@
       (ui/print-heroes heroes)
       (if-let [choice (read-choice (count heroes))]
         (heroes (dec choice))
-        (do (println "Invalid input.") (recur))))))-
+        (do (println "Invalid input.") (recur))))))
 
-(defn apply-heal-effect [card field]
+(defn apply-single-buff!
+  [card field stat-key amount stat-label]
+  (let [allies (state/heroes-on-field @field)]
+    (if (seq allies)
+      (let [target (choose-hero allies "Your Hero" "to buff")]
+        (swap! (:current-stats target) update stat-key + amount)
+        (println
+         (format "[BUFF] %s increases %s's %s by %d for this turn! Current %s: %d"
+                 (:name card)
+                 (:name target)
+                 stat-label
+                 amount
+                 stat-label
+                 (get @(:current-stats target) stat-key))))
+      (println "No heroes available to buff!"))))
+
+(defn apply-buff-effect! [card field]
+  (let [effect (:effect card)]
+    (cond
+      (:increase-health effect)
+      (apply-single-buff! card field :health (:increase-health effect) "health")
+
+      (:increase-defense effect)
+      (apply-single-buff! card field :defense (:increase-defense effect) "defense")
+
+      (:increase-power effect)
+      (apply-single-buff! card field :power (:increase-power effect) "power")
+
+      (:increase-intelligence effect)
+      (apply-single-buff! card field :intelligence (:increase-intelligence effect) "intelligence")
+
+      (:increase-agility effect)
+      (apply-single-buff! card field :agility (:increase-agility effect) "agility"))))
+
+(defn heal-hero! [hero amount]
+  (let [max-hp (get-in hero [:stats :health])]
+    (swap! (:current-hp hero)
+           #(min max-hp (+ % amount)))))
+
+(defn apply-heal-effect! [card field]
   (let [effect (:effect card)
         allies (state/heroes-on-field @field)]
     (cond
@@ -45,7 +79,7 @@
       :else
       (println "Unknown heal effect."))))
 
-(defn apply-damage-effect [card enemy-field enemy-player-hp]
+(defn apply-damage-effect! [card enemy-field enemy-player-hp]
   (let [effect (:effect card)]
     (cond
       (:damage effect)
@@ -72,22 +106,22 @@
         (println (format "[DIRECT] %s deals %d damage to the enemy player!\n"
                          (:name card) dmg))))))
 
-(defn apply-action-effect [card field enemy-field enemy-player-hp]
+(defn apply-action-effect! [card field enemy-field enemy-player-hp]
   (case (:type card)
-    :attack  (apply-damage-effect card enemy-field enemy-player-hp)
+    :attack  (apply-damage-effect! card enemy-field enemy-player-hp)
     :defense (println "Defense effects coming soon...\n")
-    :heal    (apply-heal-effect card field)
-    :buff    (println "Buff effects coming soon...\n")
+    :heal    (apply-heal-effect! card field)
+    :buff    (apply-buff-effect! card field)
     :utility (println "Utility effects coming soon...\n")
     (println (format "Effect for type %s is not yet implemented." (:type card)))))
 
 (defn apply-card-effect! [card field enemy-field enemy-player-hp]
   (when (= (:category card) :action)
-    (apply-action-effect card field enemy-field enemy-player-hp)))
+    (apply-action-effect! card field enemy-field enemy-player-hp)))
 
 (defn attack [attacker defender defender-player-hp]
-  (let [atk-stats (:stats attacker)
-        def-stats (:stats defender)
+  (let [atk-stats @(:current-stats attacker)
+         def-stats @(:current-stats defender)
         hit-chance (+ 80 (* (:intelligence atk-stats) 0.1)
                       (* (- (:agility def-stats)) 0.15))
         roll (rand-int 100)]

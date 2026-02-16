@@ -7,7 +7,9 @@
   (zero? @(:current-hp hero)))
 
 (defn init-hero [hero]
-  (assoc hero :current-hp (atom (get-in hero [:stats :health]))))
+  (assoc hero
+         :current-hp (atom (get-in hero [:stats :health]))
+         :current-stats (atom (:stats hero))))
 
 (defn init-team [team]
   (update team :heroes #(mapv init-hero %)))
@@ -60,15 +62,19 @@
                slot))
            %)))
 
-(defn place-card-on-field! [card field key idx]
-  (swap! field update idx assoc key card))
-
 (defn heroes-on-field [field]
   (->> field
        (map :hero)
        (filter some?)
        (filter alive?)
        vec))
+
+(defn reset-current-stats! [field]
+  (doseq [hero (heroes-on-field @field)]
+    (swap! (:current-stats hero) (constantly (:stats hero)))))
+
+(defn place-card-on-field! [card field key idx]
+  (swap! field update idx assoc key card))
 
 (defn playable-cards [hand used-types]
   (->> @hand
