@@ -47,18 +47,20 @@
   (loop []
     (println (format "\n%s: Select %s %d (enter number):" player card-type card-number))
     (ui/list-cards cards selected-cards)
-    (if-let [id (try (Integer/parseInt (read-line)) (catch NumberFormatException _ nil))]
-      (if-let [card (some #(and (= (:id %) id) %) cards)]
-        (if (contains? @selected-cards id)
-          (do (println "\nAlready selected!") (recur))
-          (do (swap! selected-cards conj id) (println (str "\n" (:name card) " selected!")) card))
-        (do (println "\nCard not found.") (recur)))
-      (do (println "\nInvalid input.") (recur)))))
+    (let [available (remove #(contains? @selected-cards (:id %)) cards)]
+      (if-let [choice (try (Integer/parseInt (read-line)) (catch NumberFormatException _ nil))]
+        (if-let [card (when (and (>= choice 1) (<= choice (count available)))
+                        (nth available (dec choice)))]
+          (if (contains? @selected-cards (:id card))
+            (do (println "\nAlready selected!") (recur))
+            (do (swap! selected-cards conj (:id card)) (println (str "\n" (:name card) " selected!")) card))
+          (do (println "\nCard not found.") (recur)))
+        (do (println "\nInvalid input.") (recur))))))
 
 (defn random-computer-pick [selected-in-cat cards type]
   (let [available (remove #(contains? @selected-in-cat (:id %)) cards)
         picked (rand-nth available)]
-    (println (format "\nComputer (Red Player) is picking %s..." type))
+    (println (format "\nComputer (Red Player) is picking %s...\n" type))
     (Thread/sleep 2000)
     (swap! selected-in-cat conj (:id picked))
     (println (str (:name picked) " selected!"))

@@ -125,3 +125,48 @@
         (with-redefs [read-line (fn [] "1")]
           (logic/apply-buff-effect! adrenal-rush field))
         (get @(:current-stats hero) :agility) => 40))
+
+(fact "Skip Attack marks enemy hero to skip next attack"
+      (let [hero (state/init-hero
+                  {:id 1
+                   :name "H1"
+                   :stats {:health 100 :power 10 :defense 5 :agility 20 :intelligence 10}})
+            field (atom [{:hero hero}])]
+        (with-redefs [logic/choose-hero (fn [_ _ _] hero)]
+          (logic/apply-skip-attack! field))
+        (:skip-attack? (:hero (first @field))) => true))
+
+(fact "Mind Control moves hero to other field and marks him controlled"
+      (let [hero (state/init-hero {:id 2 :name "H1" :stats {:health 100 :power 10 :defense 5 :agility 20 :intelligence 10}})
+            enemy-field (atom [{:hero hero}])
+            my-field (atom [{}])] 
+        (with-redefs [logic/choose-hero (fn [_ _ _] hero)]
+          (logic/apply-mind-control! {:name "Mind Control"} my-field enemy-field :blue))
+
+        (:hero (first @enemy-field)) => nil
+        (:hero (first @my-field)) =not=> nil
+        (let [h (:hero (first @my-field))]
+          (:controlled h) => true
+          (:control-rounds h) => 1
+          (:original-owner h) => :red)))
+
+(fact "Mind Control fails when no empty slots available"
+      (let [hero (state/init-hero {:id 2 :name "H1" :stats {:health 100 :power 10 :defense 5 :agility 20 :intelligence 10}})
+            enemy-field (atom [{:hero hero}])
+            my-field (atom [{:hero (state/init-hero {:id 1 :name "H2" :stats {:health 100 :power 10 :defense 5 :agility 20 :intelligence 10}})}])]
+        (with-redefs [logic/choose-hero (fn [_ _ _] hero)]
+          (logic/apply-mind-control! {:name "Mind Control"} my-field enemy-field :blue))
+
+        (:hero (first @enemy-field)) =not=> nil
+        (:id (:hero (first @my-field))) => 1
+        (:controlled (:hero (first @enemy-field))) => nil))
+
+(fact "Cannot place hero when only one free slot remains and enemy has controlled hero"
+      (let [controlled-hero (assoc (state/init-hero {:id 3 :name "H3" :stats {:health 100 :power 10 :defense 5 :agility 20 :intelligence 10}})
+                                   :controlled true
+                                   :control-rounds 1
+                                   :original-owner :red)
+            my-field (atom [{:hero (state/init-hero {:id 1 :name "H1" :stats {:health 100 :power 10 :defense 5 :agility 20 :intelligence 10}})}
+                            {}])
+            enemy-field (atom [{:hero controlled-hero}])]
+        (state/can-place-hero? my-field enemy-field) => false))

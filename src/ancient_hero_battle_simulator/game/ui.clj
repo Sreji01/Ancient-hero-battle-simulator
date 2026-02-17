@@ -65,13 +65,14 @@
     (format "[%s]" (:name card))))
 
 (defn list-cards [cards selected-cards]
-  (doseq [card (remove #(contains? @selected-cards (:id %)) cards)]
-    (let [tier-info (when (and (:tier card) (= (:category card) :hero))
-                      (str "[" (-> (:category card) name str/capitalize)
-                           " " (-> (:tier card) name str/upper-case) "-Tier] "))
-          type-info (when (and (:type card) (not (:tier card)) (not= (:category card) :hero))
-                      (str "[" (-> (:type card) name str/capitalize) "] "))]
-      (println (str (:id card) ". " (or tier-info type-info) (:name card) " - " (:description card))))))
+  (let [available (remove #(contains? @selected-cards (:id %)) cards)]
+    (doseq [[idx card] (map-indexed vector available)]
+      (let [tier-info (when (and (:tier card) (= (:category card) :hero))
+                        (str "[" (-> (:category card) name str/capitalize)
+                             " " (-> (:tier card) name str/upper-case) "-Tier] "))
+            type-info (when (and (:type card) (not (:tier card)) (not= (:category card) :hero))
+                        (str "[" (-> (:type card) name str/capitalize) "] "))]
+        (println (str (inc idx) ". " (or tier-info type-info) (:name card) " - " (:description card)))))))
 
 (defn print-heroes [heroes]
   (doseq [[id hero] (map-indexed vector heroes)]
@@ -115,7 +116,7 @@
   (println (str player-name " draws: " (:name card))))
 
 (defn print-card-play [player-name card msg]
-  (println (format "\n%s %s: %s\n" player-name msg (card-display-name card))))
+  (println (format "\n%s %s: %s" player-name msg (card-display-name card))))
 
 (defn print-player-hp [player-name hp]
   (println (format "%s PLAYER HEALTH: %d HP" player-name @hp)))

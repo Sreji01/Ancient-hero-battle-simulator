@@ -45,10 +45,19 @@
         i))
     field)))
 
+(defn first-empty-hero-slot-index [field]
+  (first
+   (keep-indexed
+    (fn [i slot]
+      (when (nil? (:hero slot))
+        i))
+    field)))
+
+
 (defn get-slot-config [ctype]
   (case ctype
-    :hero      {:key :hero :finder first-empty-action-slot-index :msg "plays" :err "No empty hero slots!"}
-    :action    {:key :action :finder first-empty-action-slot-index :msg "plays" :err "No empty action slots!"}
+    :hero      {:key :hero :finder first-empty-hero-slot-index :msg "plays" :err "No empty hero slots!"}
+    :action    {:key :action :finder first-empty-action-slot-index :msg "plays" :err "\nNo empty action slots!\n"}
     :trap      {:key :action :finder first-empty-action-slot-index :msg "places" :err "No empty trap slots!"}
     :equipment {:key :action :finder first-empty-action-slot-index :msg "equips" :err "No empty equipment slots!"}))
 
@@ -95,3 +104,61 @@
     (<= @blue-hp 0) "RED"
     (<= @red-hp 0) "BLUE"
     :else nil))
+
+(defn remove-hero-from-field! [field hero]
+  (swap! field
+         (fn [slots]
+           (mapv
+            (fn [slot]
+              (if (= (:id (:hero slot)) (:id hero))
+                (dissoc slot :hero)
+                slot))
+            slots))))
+
+(defn place-hero-on-field! [field hero]
+  (if-let [idx (first-empty-hero-slot-index @field)]
+    (do (swap! field update idx assoc :hero hero) true)
+    false))
+
+(defn move-hero-back! [hero blue-field red-field]
+  (let [owner (:original-owner hero)]
+    (remove-hero-from-field! blue-field hero)
+    (remove-hero-from-field! red-field hero)
+
+    (case owner
+      :blue (place-hero-on-field! blue-field hero)
+      :red  (place-hero-on-field! red-field hero))))
+
+(defn update-hero-on-field! [field hero]
+  (swap! field (fn [slots]
+                 (mapv #(if (= (:id (:hero %)) (:id hero))
+                          (assoc % :hero hero)
+                          %)
+                       slots))))
+
+(defn restore-mind-controlled-heroes! [blue-field red-field]
+  (doseq [hero (concat (heroes-on-field @blue-field)
+                       (heroes-on-field @red-field))]
+    (when (:controlled hero)
+      (let [updated (update hero :control-rounds dec)]
+        (if (zero? (:control-rounds updated))
+          (move-hero-back! (dissoc updated :controlled :control-rounds) blue-field red-field)
+          (update-hero-on-field! (if (= (:original-owner updated) :red) blue-field red-field) updated))))))
+
+(defn check-and-remove-dead! [target field]
+  (when (dead? target)
+    (println (format "\n%s has been defeated!" (:name target)))
+    (remove-hero-from-field! field target)))
+
+(defn controlled-heroes-count [field]
+  (->> (heroes-on-field @field)
+       (filter :controlled)
+       count))
+
+(defn free-hero-slots [field]
+  (count (filter #(nil? (:hero %)) @field)))
+
+(defn can-place-hero? [my-field enemy-field]
+  (let [controlled-on-enemy (controlled-heroes-count enemy-field)
+        free-slots (free-hero-slots my-field)]
+    (> free-slots controlled-on-enemy)))

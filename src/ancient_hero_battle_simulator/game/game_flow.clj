@@ -14,6 +14,7 @@
   (and input
        (>= input 1)
        (<= input (inc (count available-attackers)))))
+
 (defn choose-attacker [input available-attackers]
   (nth available-attackers (dec input)))
 
@@ -39,7 +40,7 @@
 
               :else
               (let [attacker (choose-attacker input available-attackers)]
-                (logic/perform-attack player-name attacker enemy-field enemy-player-hp)
+                (logic/perform-attack player-name attacker field enemy-field enemy-player-hp)
                 (recur player-name
                        (vec (remove #(= (:id %) (:id attacker)) available-attackers))
                        field enemy-field enemy-player-hp)))))))))
@@ -53,28 +54,37 @@
                      enemy-field
                      enemy-player-hp))
 
-(defn execute-card-play! [card hand field enemy-field enemy-player-hp player-name]
+(defn execute-card-play! [card hand field enemy-field enemy-player-hp player-name deck]
   (let [ctype (:category card)
         {:keys [key finder msg err]} (state/get-slot-config ctype)
         idx (finder @field)]
-    (if idx
+    (cond
+      (not idx)
+      {:success false :err err}
+
+      (and (= ctype :hero) (not (state/can-place-hero? field enemy-field)))
+      {:success false :err "\nCannot place hero - a slot must be reserved for returning controlled hero!\n"}
+
+      :else
       (do
         (ui/print-card-play player-name card msg)
-        (deck-managment/remove-card-from-hand! hand card)
-        (logic/apply-card-effect! card field enemy-field enemy-player-hp)
-        (state/place-card-on-field! card field key idx)
-        {:success true})
-      {:success false :err err})))
+        (let [effect-result (logic/apply-card-effect! card field enemy-field enemy-player-hp hand deck player-name)]
+          (if (false? effect-result)
+            {:success false :err "\nCard effect failed!\n"}
+            (do
+              (deck-managment/remove-card-from-hand! hand card)
+              (state/place-card-on-field! card field key idx)
+              {:success true})))))))
 
 (defn handle-choice
-  [choice playable hand field enemy-field enemy-player-hp player-name used-types show-board]
+  [choice playable hand field enemy-field enemy-player-hp player-name used-types show-board deck]
   (cond
     (= choice (inc (count playable)))
     {:done true :used-types used-types}
 
     (and (>= choice 1) (<= choice (count playable)))
     (let [card (nth playable (dec choice))
-          result (execute-card-play! card hand field enemy-field enemy-player-hp player-name)]
+          result (execute-card-play! card hand field enemy-field enemy-player-hp player-name deck)]
       (if (:success result)
         (do
           (Thread/sleep 1000)
@@ -90,7 +100,7 @@
       {:done false :used-types used-types})))
 
 (defn selection-phase
-  [player-name hand field enemy-field enemy-player-hp n]
+  [player-name hand field enemy-field enemy-player-hp n deck]
   (ui/show-selection-header player-name)
   (Thread/sleep 800)
   (let [show-board #(ui/show-board-for-player player-name field enemy-field n)]
@@ -101,7 +111,7 @@
           (ui/print-playable-cards playable)
           (if-let [choice (read-int)]
             (let [{:keys [done used-types]}
-                  (handle-choice choice playable hand field enemy-field enemy-player-hp player-name used-types show-board)]
+                  (handle-choice choice playable hand field enemy-field enemy-player-hp player-name used-types show-board deck)]
               (when-not done
                 (recur used-types)))
             (do
@@ -125,12 +135,13 @@
   (Thread/sleep 800)
   (draw-phase player-name n deck hand first-draw?)
   (Thread/sleep 400)
-  (selection-phase player-name hand field enemy-field enemy-player-hp n)
+  (selection-phase player-name hand field enemy-field enemy-player-hp n deck)
   (when can-attack?
     (attack-phase player-name field enemy-field enemy-player-hp)))
 
 (defn end-round! [game-state]
   (let [{:keys [blue red]} game-state]
+    (state/restore-mind-controlled-heroes! (:field blue) (:field red))
     (state/clear-action-slots! (:field blue))
     (state/clear-action-slots! (:field red))
     (state/reset-current-stats! (:field blue))

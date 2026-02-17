@@ -1,6 +1,7 @@
 (ns ancient-hero-battle-simulator.game.logic
   (:require [ancient-hero-battle-simulator.game.ui :as ui]
-            [ancient-hero-battle-simulator.game.game-state :as state]))
+            [ancient-hero-battle-simulator.game.game-state :as state] 
+            [ancient-hero-battle-simulator.game.deck-menagment :as deck-managment]))
 
 (defn read-choice [max]
   (if-let [input (try (Integer/parseInt (read-line)) (catch Exception _ nil))]
@@ -16,6 +17,52 @@
       (if-let [choice (read-choice (count heroes))]
         (heroes (dec choice))
         (do (println "Invalid input.") (recur))))))
+
+(defn apply-mind-control! [card field enemy-field player-color]
+  (let [enemies (state/heroes-on-field @enemy-field)]
+    (if (seq enemies)
+      (let [target (choose-hero enemies "Enemy Hero" "to control")
+            new-owner (if (= player-color :blue) :red :blue)
+            updated-target (assoc target
+                                  :controlled true
+                                  :control-rounds 1
+                                  :original-owner new-owner)]
+        (if (state/place-hero-on-field! field updated-target)
+          (do
+            (state/remove-hero-from-field! enemy-field target)
+            (println (format "\n[UTILITY] %s takes control of %s for 1 round!"
+                             (:name card) (:name target))))
+          (do
+            (println "\nNo empty slots to place controlled hero!")
+            false)))
+      (do (println "No enemy heroes to control!") false)))) 
+
+(defn apply-draw-effect! [card hand deck]
+  (let [n (:draw (:effect card))]
+    (println (format "[UTILITY] %s draws %d cards!" (:name card) n))
+    (let [drawn (deck-managment/draw-cards deck n false)]
+      (deck-managment/add-to-hand! hand drawn))))
+
+(defn apply-skip-attack! [enemy-field]
+  (let [enemies (state/heroes-on-field @enemy-field)]
+    (if (seq enemies)
+      (let [target (choose-hero enemies "Enemy Hero" "to skip attack")
+            updated-target (assoc target :skip-attack? true)]
+
+        (state/remove-hero-from-field! enemy-field target)
+        (state/place-hero-on-field! enemy-field updated-target)
+
+        (println (format "\n[UTILITY] %s will skip their next attack!"
+                         (:name target))))
+      (println "No enemy heroes to affect!"))))
+
+(defn apply-utility-effect! [card field enemy-field hand deck player-name]
+  (let [effect (:effect card)
+        player-color (if (= player-name "BLUE") :blue :red)]
+    (cond
+      (:skip-next-attack effect) (apply-skip-attack! enemy-field)
+      (:draw effect)             (apply-draw-effect! card hand deck)
+      (:take-control effect)     (apply-mind-control! card field enemy-field player-color))))
 
 (defn apply-single-buff!
   [card field stat-key amount stat-label]
@@ -67,7 +114,7 @@
           (heal-hero! target heal)
           (println (format "[HEAL] %s restores %d HP to %s!\n"
                            (:name card) heal (:name target))))
-        (println "\nNo allies to heal!"))
+        (println "No allies to heal!"))
 
       (:restore-all-allies effect)
       (let [heal (:restore-all-allies effect)]
@@ -88,15 +135,17 @@
           (let [target (choose-hero defenders "Target Enemy" "to attack")
                 dmg (:damage effect)]
             (swap! (:current-hp target) #(max 0 (- % dmg)))
-            (println (format "[DAMAGE] %s deals %d damage to %s!\n"
-                             (:name card) dmg (:name target))))
+            (println (format "\n[DAMAGE] %s deals %d damage to %s!\n"
+                             (:name card) dmg (:name target)))
+            (state/check-and-remove-dead! target enemy-field))
           (println "\nNo enemies to target! Effect wasted.")))
 
       (:damage-all-enemies effect)
       (let [defenders (state/heroes-on-field @enemy-field)
             dmg (:damage-all-enemies effect)]
         (doseq [target defenders]
-          (swap! (:current-hp target) #(max 0 (- % dmg))))
+          (swap! (:current-hp target) #(max 0 (- % dmg)))
+          (state/check-and-remove-dead! target enemy-field))
         (println (format "[AOE] %s deals %d damage to ALL enemy heroes!\n"
                          (:name card) dmg)))
 
@@ -106,44 +155,49 @@
         (println (format "[DIRECT] %s deals %d damage to the enemy player!\n"
                          (:name card) dmg))))))
 
-(defn apply-action-effect! [card field enemy-field enemy-player-hp]
+(defn apply-action-effect! [card field enemy-field enemy-player-hp hand deck player-name]
   (case (:type card)
     :attack  (apply-damage-effect! card enemy-field enemy-player-hp)
     :defense (println "Defense effects coming soon...\n")
     :heal    (apply-heal-effect! card field)
     :buff    (apply-buff-effect! card field)
-    :utility (println "Utility effects coming soon...\n")
+    :utility (apply-utility-effect! card field enemy-field hand deck player-name)
     (println (format "Effect for type %s is not yet implemented." (:type card)))))
 
-(defn apply-card-effect! [card field enemy-field enemy-player-hp]
+(defn apply-card-effect! [card field enemy-field enemy-player-hp hand deck player-name]
   (when (= (:category card) :action)
-    (apply-action-effect! card field enemy-field enemy-player-hp)))
+    (apply-action-effect! card field enemy-field enemy-player-hp hand deck player-name)))
 
-(defn attack [attacker defender defender-player-hp]
+(defn attack [attacker target target-player-hp enemy-field]
   (let [atk-stats @(:current-stats attacker)
-         def-stats @(:current-stats defender)
+        tar-stats @(:current-stats target)
         hit-chance (+ 80 (* (:intelligence atk-stats) 0.1)
-                      (* (- (:agility def-stats)) 0.15))
+                      (* (- (:agility tar-stats)) 0.15))
         roll (rand-int 100)]
     (Thread/sleep 2000)
-    (println (str "\n" (:name attacker) " attacks " (:name defender) "!"))
+    (println (str "\n" (:name attacker) " attacks " (:name target) "!"))
     (Thread/sleep 2000)
     (if (> roll hit-chance)
       (do
-        (println (str (:name defender) " dodged the attack!"))
+        (println (str (:name target) " dodged the attack!"))
         (Thread/sleep 2000))
       (let [raw-damage (:power atk-stats)
-            reduction (* (:defense def-stats) 0.5)
+            reduction (* (:defense tar-stats) 0.5)
             damage (int (max 5 (- raw-damage reduction)))]
-        (swap! (:current-hp defender) #(max 0 (- % damage)))
-        (swap! defender-player-hp #(max 0 (- % damage)))
+        (swap! (:current-hp target) #(max 0 (- % damage)))
+        (swap! target-player-hp #(max 0 (- % damage)))
         (println (str (:name attacker) " deals " damage " damage to "
-                      (:name defender) "!"))
-        (Thread/sleep 2000)))))
+                      (:name target) "!"))
+        (Thread/sleep 2000)
+        (state/check-and-remove-dead! target enemy-field)))))
 
-(defn perform-attack [player-name attacker enemy-field enemy-player-hp]
-  (let [defenders (state/heroes-on-field @enemy-field)
-        defender  (choose-hero defenders
+(defn perform-attack [player-name attacker player-field enemy-field enemy-player-hp]
+  (if (:skip-attack? attacker)
+    (do
+      (println (str "\n" (:name attacker) " is forced to skip their attack!"))
+      (state/update-hero-on-field! player-field (dissoc attacker :skip-attack?)))
+    (let [targets (state/heroes-on-field @enemy-field)
+          target  (choose-hero targets
                                (if (= player-name "BLUE") "Red" "Blue")
                                "to attack")]
-    (attack attacker defender enemy-player-hp)))
+      (attack attacker target enemy-player-hp enemy-field))))

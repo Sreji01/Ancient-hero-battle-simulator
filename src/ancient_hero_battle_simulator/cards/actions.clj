@@ -62,42 +62,42 @@
     :category :action
     :type :buff
     :effect {:increase-health 20}
-    :description "Increase a hero's health by 20."}
+    :description "Increase a hero's health by 20 for one round."}
 
    {:id 210
     :name "Iron Resolve"
     :category :action
     :type :buff
     :effect {:increase-defense 20}
-    :description "Increase a hero's defense by 20."}
+    :description "Increase a hero's defense by 20 for one round."}
 
    {:id 211
     :name "Overpower"
     :category :action
     :type :buff
     :effect {:increase-power 20}
-    :description "Increase a hero's power by 20."}
+    :description "Increase a hero's power by 20 for one round."}
 
    {:id 212
     :name "Battle Insight"
     :category :action
     :type :buff
     :effect {:increase-intelligence 20}
-    :description "Increase a hero's intelligence by 20."}
+    :description "Increase a hero's intelligence by 20 for one round."}
 
    {:id 213
     :name "Adrenal Rush"
     :category :action
     :type :buff
     :effect {:increase-agility 20}
-    :description "Increase a hero's agility by 20."}
+    :description "Increase a hero's agility by 20 for one round."}
 
    {:id 214
-    :name "Tactical Retreat"
+    :name "Stand Down"
     :category :action
     :type :utility
-    :effect {:remove-hero true}
-    :description "Return a hero to your hand, avoiding damage."}
+    :effect {:skip-next-attack true}
+    :description "Select a hero to skip their next attack, avoiding immediate combat."}
 
    {:id 215
     :name "Tactical Focus"
@@ -111,4 +111,4 @@
     :category :action
     :type :utility
     :effect {:take-control :enemy-hero}
-    :description "Take control of an enemy hero."}])
+    :description "Take control of an enemy hero for one round."}])
