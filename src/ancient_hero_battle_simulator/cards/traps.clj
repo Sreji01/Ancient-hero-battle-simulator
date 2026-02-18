@@ -1,7 +1,8 @@
 (ns ancient-hero-battle-simulator.cards.traps)
 
 (def traps
-  [{:id 301
+  [
+   {:id 301
     :name "Spike Pit"
     :category :trap
     :type :damage
@@ -10,14 +11,6 @@
     :description "Deal 20 damage to a placed hero."}
 
    {:id 302
-    :name "Poison Gas"
-    :category :trap
-    :type :damage-over-time
-    :trigger :enemy-attack
-    :effect {:damage-per-turn 10 :turns 3}
-    :description "Deal 10 damage to attacking hero per turn for 3 turns."}
-
-   {:id 303
     :name "Snare Trap"
     :category :trap
     :type :stun
@@ -25,13 +18,21 @@
     :effect {:stun 1}
     :description "Stun enemy hero for 1 turn when they are placed."}
 
-   {:id 304
-    :name "Exploding Runes"
+   {:id 303
+    :name "Trap of Confusion"
     :category :trap
-    :type :damage
-    :trigger :enemy-action
-    :effect {:damage 30}
-    :description "Deal 30 damage to an enemy player when he playes an action."}
+    :type :control
+    :trigger :enemy-hero-placed
+    :effect {:swap-position true}
+    :description "Take control of an enemy hero when they are placed for 1 turn."}
+
+   {:id 304
+    :name "Poison Gas"
+    :category :trap
+    :type :damage-over-time
+    :trigger :enemy-attack
+    :effect {:damage-per-turn 10 :turns 3}
+    :description "Deal 10 damage to attacking hero per turn for 3 turns."}
 
    {:id 305
     :name "Cursed Idol"
@@ -82,14 +83,6 @@
     :description "Reflect 15 damage back to the attacker."}
 
    {:id 311
-    :name "Trap of Confusion"
-    :category :trap
-    :type :control
-    :trigger :enemy-hero-placed
-    :effect {:swap-position true}
-    :description "Take control of an enemy hero when they are placed for 1 turn."}
-
-   {:id 312
     :name "Magic Barrier"
     :category :trap
     :type :utility
@@ -97,7 +90,23 @@
     :effect {:absorb-damage 20}
     :description "Absorb 20 damage from the next attack."}
 
+   {:id 312
+    :name "Defender's Mirror"
+    :category :trap
+    :type :control
+    :trigger :enemy-attack
+    :effect {:swap-with-defender true}
+    :description "When an enemy hero attacks, swap all their stats with a defending hero for 1 turn."}
+
    {:id 313
+    :name "Exploding Runes"
+    :category :trap
+    :type :damage
+    :trigger :enemy-action
+    :effect {:damage 30}
+    :description "Deal 30 damage to an enemy player when he plays an action."}
+
+   {:id 314
     :name "Action Mirror"
     :category :trap
     :type :reflect
@@ -105,15 +114,15 @@
     :effect {:copy-action true}
     :description "When the enemy plays an action, copy it and play it against them immediately."}
 
-   {:id 314
+   {:id 315
     :name "Action Jammer"
     :category :trap
     :type :control
     :trigger :enemy-action
     :effect {:negate-action true}
-    :description "Negates the next action played by the enemy"}
+    :description "Negates the next action played by the enemy."}
 
-   {:id 315
+   {:id 316
     :name "Battle Frenzy"
     :category :trap
     :type :buff
@@ -123,12 +132,4 @@
              :increase-defense 10
              :increase-agility 10
              :increase-intelligence 10}
-    :description "Activates when you attack: Increase all your hero's stats by 10 for one turn."}
-
-   {:id 316
-    :name "Defender's Mirror"
-    :category :trap
-    :type :control
-    :trigger :enemy-attack
-    :effect {:swap-with-defender true}
-    :description "When an enemy hero attacks, swap all their stats with a defending hero for 1 turn."}])
+    :description "Activates when you attack: Increase all your hero's stats by 10 for one turn."}])

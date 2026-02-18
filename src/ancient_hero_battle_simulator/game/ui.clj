@@ -44,6 +44,12 @@
     "TRAP"
     (:name card)))
 
+(defn confirm? [message]
+  (print message)
+  (flush)
+  (let [input (str/lower-case (read-line))]
+    (= input "y")))
+
 (defn format-card [card]
   (cond
     (= (:category card) :hero)

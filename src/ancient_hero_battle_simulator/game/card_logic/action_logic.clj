@@ -58,7 +58,7 @@
       (let [target (util/choose-hero allies "Your Hero" "to buff")]
         (swap! (:current-stats target) update stat-key + amount)
         (println
-         (format "[BUFF] %s increases %s's %s by %d for this turn! Current %s: %d"
+         (format "\n[BUFF] %s increases %s's %s by %d for this turn! Current %s: %d\n"
                  (:name card)
                  (:name target)
                  stat-label
@@ -170,7 +170,7 @@
         (doseq [target defenders]
           (swap! (:current-hp target) #(max 0 (- % dmg)))
           (state/check-and-remove-dead! target enemy-field))
-        (println (format "\n[AOE] %s deals %d damage to ALL enemy heroes!\n"
+        (println (format "[AOE] %s deals %d damage to ALL enemy heroes!\n"
                          (:name card) dmg)))
 
       (:player-damage effect)

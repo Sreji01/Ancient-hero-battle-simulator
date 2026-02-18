@@ -105,15 +105,22 @@
     (<= @red-hp 0) "BLUE"
     :else nil))
 
-(defn remove-hero-from-field! [field hero]
+(defn remove-card-from-field!
+  [field slot-key card]
   (swap! field
          (fn [slots]
            (mapv
             (fn [slot]
-              (if (= (:id (:hero slot)) (:id hero))
-                (dissoc slot :hero)
+              (if (= (:id (get slot slot-key)) (:id card))
+                (dissoc slot slot-key)
                 slot))
             slots))))
+
+(defn remove-hero-from-field! [field hero]
+  (remove-card-from-field! field :hero hero))
+
+(defn remove-trap-from-field! [field trap]
+  (remove-card-from-field! field :action trap))
 
 (defn place-hero-on-field! [field hero]
   (if-let [idx (first-empty-hero-slot-index @field)]
@@ -124,10 +131,10 @@
   (let [owner (:original-owner hero)]
     (remove-hero-from-field! blue-field hero)
     (remove-hero-from-field! red-field hero)
-
     (case owner
       :blue (place-hero-on-field! blue-field hero)
-      :red  (place-hero-on-field! red-field hero))))
+      :red  (place-hero-on-field! red-field hero)
+      (println "Error: Hero has no valid original owner!"))))
 
 (defn update-hero-on-field! [field hero]
   (swap! field (fn [slots]
@@ -162,3 +169,10 @@
   (let [controlled-on-enemy (controlled-heroes-count enemy-field)
         free-slots (free-hero-slots my-field)]
     (> free-slots controlled-on-enemy)))
+
+(defn traps-with-trigger [field trigger]
+  (->> @field
+       (map :action)
+       (filter some?)
+       (filter #(and (= (:category %) :trap)
+                     (= (:trigger %) trigger)))))

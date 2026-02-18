@@ -46,12 +46,16 @@
     (ui/print-attack-message attacker target outcome damage)))
 
 (defn perform-attack [player-name attacker player-field enemy-field enemy-player-hp]
-  (if (:skip-attack? attacker)
+  (if (:stunned? attacker)
     (do
-      (println (str "\n" (:name attacker) " is forced to skip their attack!"))
-      (state/update-hero-on-field! player-field (dissoc attacker :skip-attack?)))
-    (let [targets (state/heroes-on-field @enemy-field)
-          target  (util/choose-hero targets
-                               (if (= player-name "BLUE") "Red" "Blue")
-                               "to attack")]
-      (attack! attacker target enemy-player-hp enemy-field))))
+      (println (str "\n" (:name attacker) " is stunned and cannot attack this turn!"))
+      (state/update-hero-on-field! player-field (dissoc attacker :stunned? :stun-rounds)))
+    (if (:skip-attack? attacker)
+      (do
+        (println (str "\n" (:name attacker) " is forced to skip their attack!"))
+        (state/update-hero-on-field! player-field (dissoc attacker :skip-attack?)))
+      (let [targets (state/heroes-on-field @enemy-field)
+            target  (util/choose-hero targets
+                                      (if (= player-name "BLUE") "Red" "Blue")
+                                      "to attack")]
+        (attack! attacker target enemy-player-hp enemy-field)))))

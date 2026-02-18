@@ -3,6 +3,7 @@
    [ancient-hero-battle-simulator.game.ui :as ui]
    [ancient-hero-battle-simulator.game.combat-logic :as combat-logic]
    [ancient-hero-battle-simulator.game.card-logic.action-logic :as action-logic]
+   [ancient-hero-battle-simulator.game.card-logic.trap-logic :as trap-logic]
    [ancient-hero-battle-simulator.game.deck-menagment :as deck-managment]
    [ancient-hero-battle-simulator.game.game-state :as state]))
 
@@ -55,9 +56,12 @@
                      enemy-field
                      enemy-player-hp))
 
-(defn apply-card-effect! [card field enemy-field enemy-player-hp hand deck player-name]
-  (when (= (:category card) :action)
-    (action-logic/apply-action-effect! card field enemy-field enemy-player-hp hand deck player-name)))
+(defn apply-card-effect!
+  [card field enemy-field enemy-player-hp hand deck player-name]
+  (case (:category card)
+    :action
+    (action-logic/apply-action-effect! card field enemy-field enemy-player-hp hand deck player-name)
+    (println "Unknown card category:" (:category card))))
 
 (defn execute-card-play! [card hand field enemy-field enemy-player-hp player-name deck]
   (let [ctype (:category card)
@@ -79,6 +83,11 @@
             (do
               (deck-managment/remove-card-from-hand! hand card)
               (state/place-card-on-field! card field key idx)
+              
+              (when (= (:category card) :hero)
+                (let [placed-hero (:hero (nth @field idx))
+                      defender-name (if (= player-name "BLUE") "RED" "BLUE")]
+                  (trap-logic/handle-enemy-hero-placed! enemy-field field placed-hero defender-name)))
               {:success true})))))))
 
 (defn handle-choice
