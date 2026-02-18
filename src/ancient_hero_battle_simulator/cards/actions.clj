@@ -27,7 +27,7 @@
     :category :action
     :type :defense
     :effect {:reduce-damage-all-enemies 10}
-    :description "Reduce all damage taken by 10 for one turn."}
+    :description "Reduce all damage taken by 10 for one turn"}
 
    {:id 205
     :name "Dodge Roll"

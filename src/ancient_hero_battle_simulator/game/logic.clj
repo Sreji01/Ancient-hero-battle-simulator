@@ -128,6 +128,43 @@
       :else
       (println "Unknown heal effect."))))
 
+(defn apply-last-stand! [card field]
+  (let [allies (state/heroes-on-field @field)
+        reduction (:reduce-damage (:effect card))]
+    (if (seq allies)
+      (let [target (choose-hero allies "Your Hero" "to activate Last Stand")]
+        (swap! (:current-stats target) update :damage-reduction (fnil + 0) reduction)
+        (println (format "\n[DEFENSE] %s reduces damage taken by %s by %d for one turn!\n"
+                         (:name card) (:name target) reduction)))
+      (println "No allies available for Last Stand!"))))
+
+(defn apply-dodge-roll! [card field]
+  (let [allies (state/heroes-on-field @field)
+        chance (:evade (:effect card))]
+    (if (seq allies)
+      (let [target (choose-hero allies "Your Hero" "to receive dodge roll")]
+        (swap! (:current-stats target) assoc :evade chance)
+        (println (format "\n[DEFENSE] %s gives %s a %d%% chance to evade the next attack!\n"
+                         (:name card) (:name target) chance)))
+      (println "No allies available for Dodge Roll!"))))
+
+(defn apply-shield-wall! [card field]
+  (let [allies (state/heroes-on-field @field)
+        reduction (:reduce-damage-all-enemies (:effect card))]
+    (doseq [hero allies]
+      (swap! (:current-stats hero) update :damage-reduction (fnil + 0) reduction))
+    (println (format "\n[DEFENSE] %s reduces damage taken by all allies by %d this turn!\n"
+                     (:name card) reduction))))
+
+(defn apply-defense-effect! [card field]
+  (let [effect (:effect card)]
+    (cond
+      (:reduce-damage-all-enemies effect) (apply-shield-wall! card field)
+      (:evade effect)                     (apply-dodge-roll! card field)
+      (:reduce-damage effect)             (apply-last-stand! card field)
+      :else (println "Unknown defense effect.")))
+  (println (format "Effect for type %s is not yet implemented." (:type card))))
+
 (defn apply-damage-effect! [card enemy-field enemy-player-hp]
   (let [effect (:effect card)]
     (cond
@@ -160,7 +197,7 @@
 (defn apply-action-effect! [card field enemy-field enemy-player-hp hand deck player-name]
   (case (:type card)
     :attack  (apply-damage-effect! card enemy-field enemy-player-hp)
-    :defense (println "Defense effects coming soon...\n")
+    :defense (apply-defense-effect! card field)
     :heal    (apply-heal-effect! card field)
     :buff    (apply-buff-effect! card field)
     :utility (apply-utility-effect! card field enemy-field hand deck player-name)
@@ -175,23 +212,40 @@
         tar-stats @(:current-stats target)
         hit-chance (+ 80 (* (:intelligence atk-stats) 0.1)
                       (* (- (:agility tar-stats)) 0.15))
+        evade-chance (or (:evade tar-stats) 0)
         roll (rand-int 100)]
     (Thread/sleep 2000)
     (println (str "\n" (:name attacker) " attacks " (:name target) "!"))
     (Thread/sleep 2000)
-    (if (> roll hit-chance)
+
+    (if (< roll evade-chance)
       (do
-        (println (str "\n" (:name target) " dodged the attack!"))
+        (println (str "\n" (:name target) " dodged the attack with Dodge Roll!"))
+        (swap! (:current-stats target) dissoc :evade)
         (Thread/sleep 2000))
-      (let [raw-damage (:power atk-stats)
-            reduction (* (:defense tar-stats) 0.5)
-            damage (int (max 5 (- raw-damage reduction)))]
-        (swap! (:current-hp target) #(max 0 (- % damage)))
-        (swap! target-player-hp #(max 0 (- % damage)))
-        (println (str "\n" (:name attacker) " deals " damage " damage to "
-                      (:name target) "!"))
-        (Thread/sleep 2000)
-        (state/check-and-remove-dead! target enemy-field)))))
+      (let [roll-hit (rand-int 100)]
+        (if (> roll-hit hit-chance)
+          (do
+            (println (str "\n" (:name target) " dodged the attack!"))
+            (Thread/sleep 2000))
+          (let [raw-damage (:power atk-stats)
+                reduction (* (:defense tar-stats 0) 0.5)
+                damage-reduction (:damage-reduction tar-stats 0)
+                damage (int (max 5 (- raw-damage reduction damage-reduction)))]
+
+            (when (> damage-reduction 0)
+              (println (format "\n[DEFENSE ACTIVE] %s's shield reduces damage by %d!"
+                               (:name target) damage-reduction)))
+
+            (swap! (:current-hp target) #(max 0 (- % damage)))
+            (swap! target-player-hp #(max 0 (- % damage)))
+            (println (str "\n" (:name attacker) " deals " damage " damage to "
+                          (:name target) "!"))
+            (Thread/sleep 2000)
+            (state/check-and-remove-dead! target enemy-field)
+
+            (when (> damage-reduction 0)
+              (swap! (:current-stats target) update :damage-reduction (fnil - 0) damage-reduction))))))))
 
 (defn perform-attack [player-name attacker player-field enemy-field enemy-player-hp]
   (if (:skip-attack? attacker)

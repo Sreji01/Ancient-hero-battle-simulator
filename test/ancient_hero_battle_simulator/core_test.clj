@@ -180,3 +180,41 @@
             hand (atom [])]
         (logic/apply-draw-effect! card hand deck)
         (count @hand) => 2))
+
+(fact "Last Stand applies damage reduction to a selected ally hero"
+      (let [hero {:name "H1"
+                  :current-stats (atom {:health 100 :defense 20})
+                  :current-hp (atom 100)}
+            field (atom [{:hero hero}])
+            last-stand {:name "Last Stand"
+                        :type :defense
+                        :category :action
+                        :effect {:reduce-damage 15}}]
+        (with-redefs [logic/choose-hero (fn [_ _ _] hero)]
+          (logic/apply-last-stand! last-stand field))
+        (get @(:current-stats hero) :damage-reduction) => 15))
+
+(fact "Dodge Roll gives an ally a chance to evade next attack"
+      (let [hero {:name "H2"
+                  :current-stats (atom {:health 100 :defense 10})
+                  :current-hp (atom 100)}
+            field (atom [{:hero hero}])
+            dodge-roll {:name "Dodge Roll"
+                        :type :defense
+                        :category :action
+                        :effect {:evade 50}}]
+        (with-redefs [logic/choose-hero (fn [_ _ _] hero)]
+          (logic/apply-dodge-roll! dodge-roll field))
+        (get @(:current-stats hero) :evade) => 50))
+
+(fact "Shield Wall reduces damage for all allied heroes on field"
+      (let [hero1 {:name "H1" :current-stats (atom {:health 100}) :current-hp (atom 100)}
+            hero2 {:name "H2" :current-stats (atom {:health 100}) :current-hp (atom 100)}
+            field (atom [{:hero hero1} {:hero hero2}])
+            shield-wall {:name "Shield Wall"
+                         :type :defense
+                         :category :action
+                         :effect {:reduce-damage-all-enemies 20}}]
+        (logic/apply-shield-wall! shield-wall field)
+        (get @(:current-stats hero1) :damage-reduction) => 20
+        (get @(:current-stats hero2) :damage-reduction) => 20))
