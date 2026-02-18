@@ -38,10 +38,12 @@
       (do (println "No enemy heroes to control!") false)))) 
 
 (defn apply-draw-effect! [card hand deck]
-  (let [n (:draw (:effect card))]
-    (println (format "[UTILITY] %s draws %d cards!" (:name card) n))
-    (let [drawn (deck-managment/draw-cards deck n false)]
-      (deck-managment/add-to-hand! hand drawn))))
+  (let [n (:draw (:effect card))
+        drawn (deck-managment/draw-from-deck deck n)]
+    (println (format "\n[UTILITY] %s draws %d cards!\n" (:name card) n))
+    (doseq [c drawn]
+      (println (str "+ " (:name c)) "\n"))
+    (deck-managment/add-to-hand! hand drawn)))
 
 (defn apply-skip-attack! [enemy-field]
   (let [enemies (state/heroes-on-field @enemy-field)]
@@ -52,7 +54,7 @@
         (state/remove-hero-from-field! enemy-field target)
         (state/place-hero-on-field! enemy-field updated-target)
 
-        (println (format "\n[UTILITY] %s will skip their next attack!"
+        (println (format "\n[UTILITY] %s will skip their next attack!\n"
                          (:name target))))
       (println "No enemy heroes to affect!"))))
 
@@ -112,7 +114,7 @@
         (let [target (choose-hero allies "Your Hero" "to heal")
               heal (:restore effect)]
           (heal-hero! target heal)
-          (println (format "[HEAL] %s restores %d HP to %s!\n"
+          (println (format "\n[HEAL] %s restores %d HP to %s!\n"
                            (:name card) heal (:name target))))
         (println "No allies to heal!"))
 
@@ -120,7 +122,7 @@
       (let [heal (:restore-all-allies effect)]
         (doseq [hero allies]
           (heal-hero! hero heal))
-        (println (format "[AOE HEAL] %s restores %d HP to ALL allies!\n"
+        (println (format "\n[AOE HEAL] %s restores %d HP to ALL allies!\n"
                          (:name card) heal)))
 
       :else
@@ -146,7 +148,7 @@
         (doseq [target defenders]
           (swap! (:current-hp target) #(max 0 (- % dmg)))
           (state/check-and-remove-dead! target enemy-field))
-        (println (format "[AOE] %s deals %d damage to ALL enemy heroes!\n"
+        (println (format "\n[AOE] %s deals %d damage to ALL enemy heroes!\n"
                          (:name card) dmg)))
 
       (:player-damage effect)
@@ -179,14 +181,14 @@
     (Thread/sleep 2000)
     (if (> roll hit-chance)
       (do
-        (println (str (:name target) " dodged the attack!"))
+        (println (str "\n" (:name target) " dodged the attack!"))
         (Thread/sleep 2000))
       (let [raw-damage (:power atk-stats)
             reduction (* (:defense tar-stats) 0.5)
             damage (int (max 5 (- raw-damage reduction)))]
         (swap! (:current-hp target) #(max 0 (- % damage)))
         (swap! target-player-hp #(max 0 (- % damage)))
-        (println (str (:name attacker) " deals " damage " damage to "
+        (println (str "\n" (:name attacker) " deals " damage " damage to "
                       (:name target) "!"))
         (Thread/sleep 2000)
         (state/check-and-remove-dead! target enemy-field)))))

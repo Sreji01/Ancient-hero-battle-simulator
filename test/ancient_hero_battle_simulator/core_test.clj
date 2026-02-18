@@ -170,3 +170,13 @@
                             {}])
             enemy-field (atom [{:hero controlled-hero}])]
         (state/can-place-hero? my-field enemy-field) => false))
+
+(fact "Draw effect adds cards to hand from deck"
+      (let [card {:name "Tactical Focus"
+                  :type :utility
+                  :category :action
+                  :effect {:draw 2}}
+            deck (atom [{:id 1 :name "Card1"} {:id 2 :name "Card2"} {:id 3 :name "Card3"}])
+            hand (atom [])]
+        (logic/apply-draw-effect! card hand deck)
+        (count @hand) => 2))
