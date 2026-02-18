@@ -1,7 +1,8 @@
 (ns ancient-hero-battle-simulator.game.game-flow
   (:require
    [ancient-hero-battle-simulator.game.ui :as ui]
-   [ancient-hero-battle-simulator.game.logic :as logic]
+   [ancient-hero-battle-simulator.game.combat-logic :as combat-logic]
+   [ancient-hero-battle-simulator.game.card-logic.action-logic :as action-logic]
    [ancient-hero-battle-simulator.game.deck-menagment :as deck-managment]
    [ancient-hero-battle-simulator.game.game-state :as state]))
 
@@ -40,7 +41,7 @@
 
               :else
               (let [attacker (choose-attacker input available-attackers)]
-                (logic/perform-attack player-name attacker field enemy-field enemy-player-hp)
+                (combat-logic/perform-attack player-name attacker field enemy-field enemy-player-hp)
                 (recur player-name
                        (vec (remove #(= (:id %) (:id attacker)) available-attackers))
                        field enemy-field enemy-player-hp)))))))))
@@ -53,6 +54,10 @@
                      field
                      enemy-field
                      enemy-player-hp))
+
+(defn apply-card-effect! [card field enemy-field enemy-player-hp hand deck player-name]
+  (when (= (:category card) :action)
+    (action-logic/apply-action-effect! card field enemy-field enemy-player-hp hand deck player-name)))
 
 (defn execute-card-play! [card hand field enemy-field enemy-player-hp player-name deck]
   (let [ctype (:category card)
@@ -68,7 +73,7 @@
       :else
       (do
         (ui/print-card-play player-name card msg)
-        (let [effect-result (logic/apply-card-effect! card field enemy-field enemy-player-hp hand deck player-name)]
+        (let [effect-result (apply-card-effect! card field enemy-field enemy-player-hp hand deck player-name)]
           (if (false? effect-result)
             {:success false :err "\nCard effect failed!\n"}
             (do
