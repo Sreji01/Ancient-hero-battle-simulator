@@ -1,8 +1,7 @@
 (ns ancient-hero-battle-simulator.cards.traps)
 
 (def traps
-  [
-   {:id 301
+  [{:id 301
     :name "Spike Pit"
     :category :trap
     :type :damage
@@ -95,8 +94,8 @@
     :category :trap
     :type :control
     :trigger :enemy-attack
-    :effect {:swap-with-defender true}
-    :description "When an enemy hero attacks, swap all their stats with a defending hero for 1 turn."}
+    :effect {:reflect-attack true}
+    :description "When an enemy hero attacks, damage is reflected back to the attacker."}
 
    {:id 313
     :name "Exploding Runes"

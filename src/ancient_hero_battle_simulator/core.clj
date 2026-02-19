@@ -1,6 +1,6 @@
 (ns ancient-hero-battle-simulator.core
   (:gen-class)
-  (:require [ancient-hero-battle-simulator.game.game-flow :as game]))
+  (:require [ancient-hero-battle-simulator.game.game-flow :as flow]))
 
 (defn -main []
-  (game/start-game))
+  (flow/start-game))

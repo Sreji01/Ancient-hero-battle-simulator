@@ -241,7 +241,6 @@
                                :trigger :enemy-hero-placed
                                :effect {:stun 1}}]
                (trap-logic/apply-snare-trap! snare-trap hero enemy-field)
-               ;; hero bi trebao biti označen kao stunovan
                (:stunned? @(:current-stats hero)) => true
                (:stun-rounds @(:current-stats hero)) => 1))
        
@@ -258,9 +257,7 @@
                                       :category :trap
                                       :trigger :enemy-hero-placed}]
                (trap-logic/apply-trap-of-confusion! trap-of-confusion hero my-field enemy-field :blue)
-               ;; hero više nije na originalnom polju
                (:hero (first @enemy-field)) => nil
-               ;; hero se pojavljuje na našem polju i kontrolisan je
                (let [controlled-hero (:hero (first @my-field))]
                  (:controlled controlled-hero) => true
                  (:control-rounds controlled-hero) => 1

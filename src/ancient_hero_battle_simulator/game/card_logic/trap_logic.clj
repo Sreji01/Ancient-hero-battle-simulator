@@ -1,6 +1,6 @@
 (ns ancient-hero-battle-simulator.game.card-logic.trap-logic
   (:require [ancient-hero-battle-simulator.game.game-state :as state]
-            [ancient-hero-battle-simulator.game.ui :as ui]))
+            [clojure.string :as str]))
 
 (defn apply-snare-trap!
   [card hero enemy-field]
@@ -43,10 +43,16 @@
     :control (apply-trap-of-confusion! card placed-hero field enemy-field player-name)
     (println "Unknown trap type.")))
 
+(defn confirm? [message]
+  (print message)
+  (flush)
+  (let [input (str/lower-case (read-line))]
+    (= input "y")))
+
 (defn handle-enemy-hero-placed!
   [defender-field attacker-field placed-hero defender-name]
   (let [traps (state/traps-with-trigger defender-field :enemy-hero-placed)]
     (doseq [trap traps]
-      (when (ui/confirm? (str "Activate trap: " (:name trap) "? (y/n)"))
+      (when (confirm? (str "Activate trap: " (:name trap) "? (y/n)\n"))
         (apply-enemy-hero-placed-trap! trap defender-field attacker-field defender-name placed-hero)
         (state/remove-trap-from-field! defender-field trap)))))

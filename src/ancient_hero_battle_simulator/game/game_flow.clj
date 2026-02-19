@@ -56,14 +56,13 @@
                      enemy-field
                      enemy-player-hp))
 
-(defn apply-card-effect!
-  [card field enemy-field enemy-player-hp hand deck player-name]
+(defn apply-card-effect! [card field enemy-field enemy-player-hp hand deck player-name]
   (case (:category card)
-    :action
-    (action-logic/apply-action-effect! card field enemy-field enemy-player-hp hand deck player-name)
+    :action    (action-logic/apply-action-effect!       card field enemy-field enemy-player-hp hand deck player-name)
+    :equipment (println "Equipment logic not yet implemented")
     (println "Unknown card category:" (:category card))))
 
-(defn execute-card-play! [card hand field enemy-field enemy-player-hp player-name deck]
+(defn execute-card-play! [card hand field enemy-field enemy-player-hp player-name deck n]
   (let [ctype (:category card)
         {:keys [key finder msg err]} (state/get-slot-config ctype)
         idx (finder @field)]
@@ -77,28 +76,31 @@
       :else
       (do
         (ui/print-card-play player-name card msg)
-        (let [effect-result (apply-card-effect! card field enemy-field enemy-player-hp hand deck player-name)]
+        (let [effect-result (if (or (= ctype :action) (= ctype :equipment))
+                              (apply-card-effect! card field enemy-field enemy-player-hp hand deck player-name)
+                              true)]
           (if (false? effect-result)
             {:success false :err "\nCard effect failed!\n"}
             (do
               (deck-managment/remove-card-from-hand! hand card)
               (state/place-card-on-field! card field key idx)
-              
-              (when (= (:category card) :hero)
-                (let [placed-hero (:hero (nth @field idx))
+              (ui/show-board-for-player player-name field enemy-field n)
+              (when (= ctype :hero)
+                (let [placed-hero   (:hero (nth @field idx))
                       defender-name (if (= player-name "BLUE") "RED" "BLUE")]
+                  (ui/show-board-for-player player-name field enemy-field n)
                   (trap-logic/handle-enemy-hero-placed! enemy-field field placed-hero defender-name)))
               {:success true})))))))
 
 (defn handle-choice
-  [choice playable hand field enemy-field enemy-player-hp player-name used-types show-board deck]
+  [choice playable hand field enemy-field enemy-player-hp player-name used-types show-board deck n]
   (cond
     (= choice (inc (count playable)))
     {:done true :used-types used-types}
 
     (and (>= choice 1) (<= choice (count playable)))
     (let [card (nth playable (dec choice))
-          result (execute-card-play! card hand field enemy-field enemy-player-hp player-name deck)]
+          result (execute-card-play! card hand field enemy-field enemy-player-hp player-name deck n)]
       (if (:success result)
         (do
           (Thread/sleep 1000)
@@ -125,7 +127,7 @@
           (ui/print-playable-cards playable)
           (if-let [choice (read-int)]
             (let [{:keys [done used-types]}
-                  (handle-choice choice playable hand field enemy-field enemy-player-hp player-name used-types show-board deck)]
+                  (handle-choice choice playable hand field enemy-field enemy-player-hp player-name used-types show-board deck n)]
               (when-not done
                 (recur used-types)))
             (do
