@@ -52,7 +52,12 @@
 (defn handle-enemy-hero-placed!
   [defender-field attacker-field placed-hero defender-name]
   (let [traps (state/traps-with-trigger defender-field :enemy-hero-placed)]
-    (doseq [trap traps]
-      (when (confirm? (str "Activate trap: " (:name trap) "? (y/n)\n"))
-        (apply-enemy-hero-placed-trap! trap defender-field attacker-field defender-name placed-hero)
-        (state/remove-trap-from-field! defender-field trap)))))
+    (reduce (fn [activated? trap]
+              (if (confirm? (str "Activate trap: " (:name trap) "? (y/n)\n"))
+                (do
+                  (apply-enemy-hero-placed-trap! trap defender-field attacker-field defender-name placed-hero)
+                  (state/remove-trap-from-field! defender-field trap)
+                  true)
+                activated?))
+            false
+            traps)))

@@ -84,13 +84,16 @@
             (do
               (deck-managment/remove-card-from-hand! hand card)
               (state/place-card-on-field! card field key idx)
-              (ui/show-board-for-player player-name field enemy-field n)
-              (when (= ctype :hero)
-                (let [placed-hero   (:hero (nth @field idx))
-                      defender-name (if (= player-name "BLUE") "RED" "BLUE")]
-                  (ui/show-board-for-player player-name field enemy-field n)
-                  (trap-logic/handle-enemy-hero-placed! enemy-field field placed-hero defender-name)))
-              {:success true})))))))
+              (let [board-shown? (when (= ctype :hero)
+                                   (ui/show-board-for-player player-name field enemy-field n)
+                                   (let [placed-hero   (:hero (nth @field idx))
+                                         defender-name (if (= player-name "BLUE") "RED" "BLUE")
+                                         trap-activated? (trap-logic/handle-enemy-hero-placed! enemy-field field placed-hero defender-name)]
+                                     (when trap-activated?
+                                       (ui/show-board-for-player player-name field enemy-field n))
+                                     true))]
+                {:success true :board-shown? (boolean board-shown?)}))))))))
+
 
 (defn handle-choice
   [choice playable hand field enemy-field enemy-player-hp player-name used-types show-board deck n]
@@ -104,7 +107,8 @@
       (if (:success result)
         (do
           (Thread/sleep 1000)
-          (show-board)
+          (when-not (:board-shown? result)
+            (show-board))
           {:done false :used-types (conj used-types (:category card))})
         (do
           (println (:err result))
