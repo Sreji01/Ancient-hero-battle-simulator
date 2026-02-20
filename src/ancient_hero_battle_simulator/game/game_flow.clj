@@ -2,122 +2,19 @@
   (:require
    [ancient-hero-battle-simulator.game.ui :as ui]
    [ancient-hero-battle-simulator.game.combat-logic :as combat-logic]
-   [ancient-hero-battle-simulator.game.card-logic.action-logic :as action-logic]
-   [ancient-hero-battle-simulator.game.card-logic.trap-logic :as trap-logic]
+   [ancient-hero-battle-simulator.game.logic :as logic]
    [ancient-hero-battle-simulator.game.deck-menagment :as deck-managment]
-   [ancient-hero-battle-simulator.game.game-state :as state]))
-
-(defn read-int []
-  (try
-    (Integer/parseInt (read-line))
-    (catch Exception _ nil)))
-
-(defn valid-attacker-choice? [input available-attackers]
-  (and input
-       (>= input 1)
-       (<= input (inc (count available-attackers)))))
-
-(defn choose-attacker [input available-attackers]
-  (nth available-attackers (dec input)))
-
-(defn end-attack-phase? [input available-attackers]
-  (= input (inc (count available-attackers))))
-
-(defn attack-phase-loop
-  [player-name available-attackers field enemy-field enemy-player-hp]
-  (when (seq available-attackers)
-    (let [defenders (state/heroes-on-field @enemy-field)]
-      (if (empty? defenders)
-        (println "No enemies to attack!")
-        (do
-          (ui/print-attackers available-attackers)
-          (let [input (read-int)]
-            (cond
-              (not (valid-attacker-choice? input available-attackers))
-              (do (println "Invalid input.")
-                  (recur player-name available-attackers field enemy-field enemy-player-hp))
-
-              (end-attack-phase? input available-attackers)
-              (println "\nEnding attack phase...")
-
-              :else
-              (let [attacker (choose-attacker input available-attackers)]
-                (combat-logic/perform-attack player-name attacker field enemy-field enemy-player-hp)
-                (recur player-name
-                       (vec (remove #(= (:id %) (:id attacker)) available-attackers))
-                       field enemy-field enemy-player-hp)))))))))
+   [ancient-hero-battle-simulator.game.game-state :as state]
+   [ancient-hero-battle-simulator.game.utilility :as util]))
 
 (defn attack-phase [player-name field enemy-field enemy-player-hp]
   (println (str "\n--- " player-name " ATTACK PHASE ---"))
   (Thread/sleep 800)
-  (attack-phase-loop player-name
+  (combat-logic/attack-phase-loop player-name
                      (state/heroes-on-field @field)
                      field
                      enemy-field
                      enemy-player-hp))
-
-(defn apply-card-effect! [card field enemy-field enemy-player-hp hand deck player-name]
-  (case (:category card)
-    :action    (action-logic/apply-action-effect!       card field enemy-field enemy-player-hp hand deck player-name)
-    :equipment (println "Equipment logic not yet implemented")
-    (println "Unknown card category:" (:category card))))
-
-(defn execute-card-play! [card hand field enemy-field enemy-player-hp player-name deck n]
-  (let [ctype (:category card)
-        {:keys [key finder msg err]} (state/get-slot-config ctype)
-        idx (finder @field)]
-    (cond
-      (not idx)
-      {:success false :err err}
-
-      (and (= ctype :hero) (not (state/can-place-hero? field enemy-field)))
-      {:success false :err "\nCannot place hero - a slot must be reserved for returning controlled hero!\n"}
-
-      :else
-      (do
-        (ui/print-card-play player-name card msg)
-        (let [effect-result (if (or (= ctype :action) (= ctype :equipment))
-                              (apply-card-effect! card field enemy-field enemy-player-hp hand deck player-name)
-                              true)]
-          (if (false? effect-result)
-            {:success false :err "\nCard effect failed!\n"}
-            (do
-              (deck-managment/remove-card-from-hand! hand card)
-              (state/place-card-on-field! card field key idx)
-              (let [board-shown? (when (= ctype :hero)
-                                   (ui/show-board-for-player player-name field enemy-field n)
-                                   (let [placed-hero   (:hero (nth @field idx))
-                                         defender-name (if (= player-name "BLUE") "RED" "BLUE")
-                                         trap-activated? (trap-logic/handle-enemy-hero-placed! enemy-field field placed-hero defender-name)]
-                                     (when trap-activated?
-                                       (ui/show-board-for-player player-name field enemy-field n))
-                                     true))]
-                {:success true :board-shown? (boolean board-shown?)}))))))))
-
-
-(defn handle-choice
-  [choice playable hand field enemy-field enemy-player-hp player-name used-types show-board deck n]
-  (cond
-    (= choice (inc (count playable)))
-    {:done true :used-types used-types}
-
-    (and (>= choice 1) (<= choice (count playable)))
-    (let [card (nth playable (dec choice))
-          result (execute-card-play! card hand field enemy-field enemy-player-hp player-name deck n)]
-      (if (:success result)
-        (do
-          (Thread/sleep 1000)
-          (when-not (:board-shown? result)
-            (show-board))
-          {:done false :used-types (conj used-types (:category card))})
-        (do
-          (println (:err result))
-          {:done false :used-types used-types})))
-
-    :else
-    (do
-      (println "Invalid choice.")
-      {:done false :used-types used-types})))
 
 (defn selection-phase
   [player-name hand field enemy-field enemy-player-hp n deck]
@@ -129,9 +26,9 @@
       (let [playable (state/playable-cards hand used-types)]
         (when (seq playable)
           (ui/print-playable-cards playable)
-          (if-let [choice (read-int)]
+          (if-let [choice (util/read-int)]
             (let [{:keys [done used-types]}
-                  (handle-choice choice playable hand field enemy-field enemy-player-hp player-name used-types show-board deck n)]
+                  (logic/handle-choice choice playable hand field enemy-field enemy-player-hp player-name used-types show-board deck n)]
               (when-not done
                 (recur used-types)))
             (do

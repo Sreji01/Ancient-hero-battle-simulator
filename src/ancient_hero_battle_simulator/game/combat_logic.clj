@@ -59,3 +59,38 @@
                                       (if (= player-name "BLUE") "Red" "Blue")
                                       "to attack")]
         (attack! attacker target enemy-player-hp enemy-field)))))
+
+(defn choose-attacker [input available-attackers]
+  (nth available-attackers (dec input)))
+
+(defn end-attack-phase? [input available-attackers]
+  (= input (inc (count available-attackers))))
+
+(defn valid-attacker-choice? [input available-attackers]
+  (and input
+       (>= input 1)
+       (<= input (inc (count available-attackers)))))
+
+(defn attack-phase-loop
+  [player-name available-attackers field enemy-field enemy-player-hp]
+  (when (seq available-attackers)
+    (let [defenders (state/heroes-on-field @enemy-field)]
+      (if (empty? defenders)
+        (println "No enemies to attack!")
+        (do
+          (ui/print-attackers available-attackers)
+          (let [input (util/read-int)]
+            (cond
+              (not (valid-attacker-choice? input available-attackers))
+              (do (println "Invalid input.")
+                  (recur player-name available-attackers field enemy-field enemy-player-hp))
+
+              (end-attack-phase? input available-attackers)
+              (println "\nEnding attack phase...")
+
+              :else
+              (let [attacker (choose-attacker input available-attackers)]
+                (perform-attack player-name attacker field enemy-field enemy-player-hp)
+                (recur player-name
+                       (vec (remove #(= (:id %) (:id attacker)) available-attackers))
+                       field enemy-field enemy-player-hp)))))))))

@@ -96,6 +96,13 @@
                      (not (contains? @unavailable (:id %))))
                team)))
 
+(defn valid-slot? [card field]
+  (let [{:keys [finder err]} (get-slot-config (:category card))
+        idx (finder @field)]
+    (if idx
+      {:success true :idx idx}
+      {:success false :err err})))
+
 (defn game-over? [blue-hp red-hp]
   (or (<= @blue-hp 0) (<= @red-hp 0)))
 
