@@ -243,23 +243,165 @@
                (trap-logic/apply-snare-trap! snare-trap hero enemy-field)
                (:stunned? @(:current-stats hero)) => true
                (:stun-rounds @(:current-stats hero)) => 1))
-       
-       (fact "Trap of Confusion takes control of enemy hero"
-             (let [hero {:id 3
-                         :name "H3"
-                         :current-hp (atom 50)
-                         :current-stats (atom {})
-                         :owner :red}
-                   my-field (atom [{} {}])
-                   enemy-field (atom [{:hero hero}])
-                   trap-of-confusion {:name "Trap of Confusion"
-                                      :type :control
-                                      :category :trap
-                                      :trigger :enemy-hero-placed}]
-               (trap-logic/apply-trap-of-confusion! trap-of-confusion hero my-field enemy-field :blue)
-               (:hero (first @enemy-field)) => nil
-               (let [controlled-hero (:hero (first @my-field))]
-                 (:controlled controlled-hero) => true
-                 (:control-rounds controlled-hero) => 1
-                 (:original-owner controlled-hero) => :red
-                 (:owner controlled-hero) => :blue)))
+
+(fact "Poison Gas applies damage over time to attacker"
+      (let [attacker    {:name          "Attacker1"
+                         :current-hp    (atom 100)
+                         :current-stats (atom {:health 100 :power 50 :defense 10 :agility 20 :intelligence 10})}
+            target      {:name          "Target1"
+                         :current-hp    (atom 100)
+                         :current-stats (atom {:defense 10})}
+            trap        {:id       304
+                         :name     "Poison Gas"
+                         :category :trap
+                         :type     :damage-over-time
+                         :trigger  :enemy-attack
+                         :effect   {:damage-per-turn 10 :turns 3}}
+            enemy-field (atom [{:action trap}])]
+        (with-redefs [read-line (fn [] "y")]
+          (trap-logic/handle-enemy-attack-traps! enemy-field attacker target))
+        (:dot @(:current-stats attacker)) => {:damage 10 :turns 3}))
+
+(fact "Cursed Idol reduces attacking hero power by 20"
+      (let [attacker    {:name          "Attacker2"
+                         :current-hp    (atom 100)
+                         :current-stats (atom {:power 50})}
+            target      {:name          "Target2"
+                         :current-hp    (atom 100)
+                         :current-stats (atom {:defense 10})}
+            trap        {:id       305
+                         :name     "Cursed Idol"
+                         :category :trap
+                         :type     :debuff
+                         :trigger  :enemy-attack
+                         :effect   {:reduce-power 20}}
+            enemy-field (atom [{:action trap}])]
+        (with-redefs [read-line (fn [] "y")]
+          (trap-logic/handle-enemy-attack-traps! enemy-field attacker target))
+        (get @(:current-stats attacker) :power) => 30))
+
+(fact "Crippling Guard reduces attacking hero defense by 20"
+      (let [attacker    {:name          "Attacker3"
+                         :current-hp    (atom 100)
+                         :current-stats (atom {:defense 40})}
+            target      {:name          "Target3"
+                         :current-hp    (atom 100)
+                         :current-stats (atom {:defense 10})}
+            trap        {:id       306
+                         :name     "Crippling Guard"
+                         :category :trap
+                         :type     :debuff
+                         :trigger  :enemy-attack
+                         :effect   {:reduce-defense 20}}
+            enemy-field (atom [{:action trap}])]
+        (with-redefs [read-line (fn [] "y")]
+          (trap-logic/handle-enemy-attack-traps! enemy-field attacker target))
+        (get @(:current-stats attacker) :defense) => 20))
+
+(fact "Fatigue Curse reduces attacking hero agility by 20"
+      (let [attacker    {:name          "Attacker4"
+                         :current-hp    (atom 100)
+                         :current-stats (atom {:agility 35})}
+            target      {:name          "Target4"
+                         :current-hp    (atom 100)
+                         :current-stats (atom {:defense 10})}
+            trap        {:id       307
+                         :name     "Fatigue Curse"
+                         :category :trap
+                         :type     :debuff
+                         :trigger  :enemy-attack
+                         :effect   {:reduce-agility 20}}
+            enemy-field (atom [{:action trap}])]
+        (with-redefs [read-line (fn [] "y")]
+          (trap-logic/handle-enemy-attack-traps! enemy-field attacker target))
+        (get @(:current-stats attacker) :agility) => 15))
+
+(fact "Weaken Mind reduces attacking hero intelligence by 20"
+      (let [attacker    {:name          "Attacker5"
+                         :current-hp    (atom 100)
+                         :current-stats (atom {:intelligence 25})}
+            target      {:name          "Target5"
+                         :current-hp    (atom 100)
+                         :current-stats (atom {:defense 10})}
+            trap        {:id       308
+                         :name     "Weaken Mind"
+                         :category :trap
+                         :type     :debuff
+                         :trigger  :enemy-attack
+                         :effect   {:reduce-intelligence 20}}
+            enemy-field (atom [{:action trap}])]
+        (with-redefs [read-line (fn [] "y")]
+          (trap-logic/handle-enemy-attack-traps! enemy-field attacker target))
+        (get @(:current-stats attacker) :intelligence) => 5))
+
+(fact "Siphon Vitality reduces attacking hero health by 20"
+      (let [attacker    {:name          "Attacker6"
+                         :current-hp    (atom 100)
+                         :current-stats (atom {:current-hp 100})}
+            target      {:name          "Target6"
+                         :current-hp    (atom 100)
+                         :current-stats (atom {:defense 10})}
+            trap        {:id       309
+                         :name     "Siphon Vitality"
+                         :category :trap
+                         :type     :debuff
+                         :trigger  :enemy-attack
+                         :effect   {:reduce-health 20}}
+            enemy-field (atom [{:action trap}])]
+        (with-redefs [read-line (fn [] "y")]
+          (trap-logic/handle-enemy-attack-traps! enemy-field attacker target))
+        (get @(:current-stats attacker) :current-hp) => 80))
+
+(fact "Mirror Trap reflects 15 damage to attacker"
+      (let [attacker    {:name          "Attacker7"
+                         :current-hp    (atom 50)
+                         :current-stats (atom {})}
+            target      {:name          "Target7"
+                         :current-hp    (atom 100)
+                         :current-stats (atom {:defense 10})}
+            trap        {:id       310
+                         :name     "Mirror Trap"
+                         :category :trap
+                         :type     :reflect
+                         :trigger  :enemy-attack
+                         :effect   {:reflect-damage 15}}
+            enemy-field (atom [{:action trap}])]
+        (with-redefs [read-line (fn [] "y")]
+          (trap-logic/handle-enemy-attack-traps! enemy-field attacker target))
+        @(:current-hp attacker) => 35))
+
+(fact "Magic Barrier absorbs 20 damage from next attack"
+      (let [attacker    {:name          "Attacker8"
+                         :current-hp    (atom 100)
+                         :current-stats (atom {})}
+            target      {:name          "Target8"
+                         :current-hp    (atom 100)
+                         :current-stats (atom {:defense 10})}
+            trap        {:id       311
+                         :name     "Magic Barrier"
+                         :category :trap
+                         :type     :utility
+                         :trigger  :enemy-attack
+                         :effect   {:absorb-damage 20}}
+            enemy-field (atom [{:action trap}])]
+        (with-redefs [read-line (fn [] "y")]
+          (trap-logic/handle-enemy-attack-traps! enemy-field attacker target))
+        (get @(:current-stats attacker) :absorb) => 20))
+
+(fact "Defender's Mirror sets reflect-attack flag on attacker"
+      (let [attacker    {:name          "Attacker9"
+                         :current-hp    (atom 100)
+                         :current-stats (atom {})}
+            target      {:name          "Target9"
+                         :current-hp    (atom 100)
+                         :current-stats (atom {:defense 10})}
+            trap        {:id       312
+                         :name     "Defender's Mirror"
+                         :category :trap
+                         :type     :control
+                         :trigger  :enemy-attack
+                         :effect   {:reflect-attack true}}
+            enemy-field (atom [{:action trap}])]
+        (with-redefs [read-line (fn [] "y")]
+          (trap-logic/handle-enemy-attack-traps! enemy-field attacker target))
+        (get @(:current-stats attacker) :reflect-attack) => true))

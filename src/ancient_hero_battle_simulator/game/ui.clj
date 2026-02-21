@@ -2,15 +2,15 @@
   (:gen-class)
   (:require [clojure.string :as str]))
 
-(defn print-attack-message [attacker target outcome damage]
-  (Thread/sleep 1500)
-  (println (str "\n" (:name attacker) " attacks " (:name target) "!\n"))
-  (Thread/sleep 2000)
+(defn print-attack-message [attacker target] 
+  (println (str (:name attacker) " attacks " (:name target) "!\n")))
+
+(defn print-outcome [attacker target outcome damage]
   (case outcome
     :dodge-roll (println (str (:name target) " dodged with Dodge Roll!"))
     :dodge      (println (str (:name target) " dodged the attack!"))
     :hit        (when (> damage 0)
-                    (println (str (:name attacker) " deals " damage " damage to " (:name target) "!")))))
+                  (println (str (:name attacker) " deals " damage " damage to " (:name target) "!")))))
 
 (defn announce-random-picks [blue-picks red-picks type]
   (println (format "\n--- Randomly assigning %s ---" type))

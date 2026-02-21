@@ -71,5 +71,5 @@
 
     :else
     (do
-      (println "\nInvalid choice.]n")
+      (println "\nInvalid choice.\n")
       {:done false :used-types used-types})))

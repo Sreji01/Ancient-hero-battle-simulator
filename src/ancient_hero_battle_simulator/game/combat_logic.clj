@@ -1,7 +1,8 @@
 (ns ancient-hero-battle-simulator.game.combat-logic
   (:require [ancient-hero-battle-simulator.game.ui :as ui]
             [ancient-hero-battle-simulator.game.game-state :as state]
-            [ancient-hero-battle-simulator.game.utilility :as util]))
+            [ancient-hero-battle-simulator.game.utilility :as util]
+            [ancient-hero-battle-simulator.game.card-logic.trap-logic :as trap-logic]))
 
 (defn calculate-hit? [attacker target]
   (let [atk-stats @(:current-stats attacker)
@@ -28,6 +29,9 @@
   (swap! target-player-hp #(max 0 (- % damage))))
 
 (defn attack! [attacker target target-player-hp enemy-field]
+  (Thread/sleep 1500)
+  (ui/print-attack-message attacker target)
+  (trap-logic/handle-enemy-attack-traps! enemy-field attacker target)
   (let [outcome (calculate-hit? attacker target)
         damage  (if (= outcome :hit)
                   (compute-damage attacker target)
@@ -42,8 +46,8 @@
       (let [stats-atom (:current-stats target)]
         (when (> (:damage-reduction @stats-atom 0) 0)
           (swap! stats-atom assoc :damage-reduction 0))))
-
-    (ui/print-attack-message attacker target outcome damage)))
+    (Thread/sleep 1500)
+    (ui/print-outcome attacker target outcome damage)))
 
 (defn perform-attack [player-name attacker player-field enemy-field enemy-player-hp]
   (if (:stunned? attacker)

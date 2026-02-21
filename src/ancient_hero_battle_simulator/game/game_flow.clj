@@ -2,6 +2,7 @@
   (:require
    [ancient-hero-battle-simulator.game.ui :as ui]
    [ancient-hero-battle-simulator.game.combat-logic :as combat-logic]
+   [ancient-hero-battle-simulator.game.card-logic.trap-logic :as trap-logic]
    [ancient-hero-battle-simulator.game.logic :as logic]
    [ancient-hero-battle-simulator.game.deck-menagment :as deck-managment]
    [ancient-hero-battle-simulator.game.game-state :as state]
@@ -20,6 +21,8 @@
   [player-name hand field enemy-field enemy-player-hp n deck]
   (ui/show-selection-header player-name)
   (Thread/sleep 800)
+  (trap-logic/apply-dot-effects! field)
+  (Thread/sleep 600)
   (let [show-board #(ui/show-board-for-player player-name field enemy-field n)]
     (show-board)
     (loop [used-types #{}]
