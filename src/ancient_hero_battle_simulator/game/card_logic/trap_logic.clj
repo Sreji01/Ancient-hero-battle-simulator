@@ -1,6 +1,57 @@
 (ns ancient-hero-battle-simulator.game.card-logic.trap-logic
   (:require [ancient-hero-battle-simulator.game.game-state :as state]
+            [ancient-hero-battle-simulator.game.card-logic.action-logic :as action-logic]
             [clojure.string :as str]))
+
+(defn confirm? [message]
+  (print message)
+  (flush)
+  (let [input (str/lower-case (read-line))]
+    (= input "y")))
+
+(defn apply-enemy-action-trap!
+  [trap attacker-field defender-field action-card player-hp hand deck player-name]
+  (case (:type trap)
+
+    :damage
+    (let [{:keys [damage]} (:effect trap)]
+      (swap! player-hp #(max 0 (- % damage)))
+      (println (format "\n[TRAP] %s deals %d damage to enemy player!\n"
+                       (:name trap) damage)))
+
+    :reflect
+    (let [{:keys [copy-action]} (:effect trap)]
+      (when copy-action
+        (println (format "\n[TRAP] %s copies action %s and plays it back!\n"
+                         (:name trap) (:name action-card)))
+        (action-logic/apply-action-effect! 
+         action-card defender-field attacker-field player-hp hand deck player-name
+         (:player-hp attacker-field)
+         nil
+         "TRAP")))
+
+    :control
+    (let [{:keys [negate-action]} (:effect trap)]
+      (when negate-action
+        (println (format "\n[TRAP] %s negates the action %s!\n"
+                         (:name trap) (:name action-card)))
+        :negated))
+
+    (println "Unknown enemy-action trap type.")))
+
+(defn handle-enemy-action-traps!
+  [defender-field attacker-field action-card player-hp hand deck player-name]
+  (let [traps (state/traps-with-trigger defender-field :enemy-action)]
+    (reduce
+     (fn [result trap]
+       (if (confirm? (str "\nActivate trap: " (:name trap) "? (y/n)\n"))
+         (let [res (apply-enemy-action-trap!
+                    trap attacker-field defender-field action-card player-hp hand deck player-name)]
+           (state/remove-trap-from-field! defender-field trap)
+           (or result res))
+         result))
+     false
+     traps)))
 
 (defn apply-dot-effects! [field]
   (doseq [hero (state/heroes-on-field @field)]
@@ -65,12 +116,6 @@
                          (:name trap) (:name attacker)))))
 
     (println "Unknown trap type.")))
-
-(defn confirm? [message]
-  (print message)
-  (flush)
-  (let [input (str/lower-case (read-line))]
-    (= input "y")))
 
 (defn handle-enemy-attack-traps! [defender-field attacker target]
   (let [traps (state/traps-with-trigger defender-field :enemy-attack)]

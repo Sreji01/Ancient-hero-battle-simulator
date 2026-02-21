@@ -6,16 +6,26 @@
    [ancient-hero-battle-simulator.game.deck-menagment :as deck-managment]
    [ancient-hero-battle-simulator.game.game-state :as state]))
 
-(defn apply-card-effect! [card field enemy-field enemy-player-hp hand deck player-name]
+(defn apply-card-effect! [card field enemy-field player-hp enemy-player-hp hand deck player-name]
   (case (:category card)
-    :action    (action-logic/apply-action-effect!       card field enemy-field enemy-player-hp hand deck player-name)
-    :equipment (println "Equipment logic not yet implemented")
+    :action
+    (let [trap-result (trap-logic/handle-enemy-action-traps! enemy-field field card player-hp hand deck player-name)]
+      (if (= trap-result :negated)
+        (do
+          (println (format "\n %s was negated!\n" (:name card)))
+          false)
+        (action-logic/apply-action-effect!
+         card field enemy-field enemy-player-hp hand deck player-name)))
+
+    :equipment
+    (println "Equipment logic not yet implemented")
+
     (println "Unknown card category:" (:category card))))
 
-(defn apply-effect [card hand field enemy-field enemy-player-hp deck player-name]
+(defn apply-effect [card hand field enemy-field player-hp enemy-player-hp deck player-name]
   (if (or (= (:category card) :action)
           (= (:category card) :equipment))
-    (apply-card-effect! card field enemy-field enemy-player-hp hand deck player-name)
+    (apply-card-effect! card field enemy-field player-hp enemy-player-hp hand deck player-name)
     true))
 
 (defn handle-board-and-traps [card field enemy-field player-name n idx]
@@ -28,7 +38,7 @@
         (ui/show-board-for-player player-name field enemy-field n))
       true)))
 
-(defn execute-card-play! [card hand field enemy-field enemy-player-hp player-name deck n]
+(defn execute-card-play! [card hand field enemy-field player-hp enemy-player-hp player-name deck n]
   (ui/print-card-play player-name card (:msg (state/get-slot-config (:category card))))
 
   (let [{:keys [success idx err]} (state/valid-slot? card field)]
@@ -40,7 +50,7 @@
       {:success false :err "\nCannot place hero - a slot must be reserved for returning controlled hero!\n"}
 
       :else
-      (let [effect-result (apply-effect card hand field enemy-field enemy-player-hp deck player-name)]
+      (let [effect-result (apply-effect card hand field enemy-field player-hp enemy-player-hp deck player-name)]
         (if (false? effect-result)
           {:success false :err "\nCard effect failed!\n"}
           (do
@@ -51,14 +61,14 @@
 
 
 (defn handle-choice
-  [choice playable hand field enemy-field enemy-player-hp player-name used-types show-board deck n]
+  [choice playable hand field enemy-field player-hp enemy-player-hp player-name used-types show-board deck n]
   (cond
     (= choice (inc (count playable)))
     {:done true :used-types used-types}
 
     (and (>= choice 1) (<= choice (count playable)))
     (let [card (nth playable (dec choice))
-          result (execute-card-play! card hand field enemy-field enemy-player-hp player-name deck n)]
+          result (execute-card-play! card hand field enemy-field player-hp enemy-player-hp player-name deck n)]
       (if (:success result)
         (do
           (Thread/sleep 1000)

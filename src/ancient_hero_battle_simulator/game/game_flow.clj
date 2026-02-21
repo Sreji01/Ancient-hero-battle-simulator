@@ -18,7 +18,7 @@
                      enemy-player-hp))
 
 (defn selection-phase
-  [player-name hand field enemy-field enemy-player-hp n deck]
+  [player-name hand field enemy-field player-hp enemy-player-hp n deck]
   (ui/show-selection-header player-name)
   (Thread/sleep 800)
   (trap-logic/apply-dot-effects! field)
@@ -31,7 +31,7 @@
           (ui/print-playable-cards playable)
           (if-let [choice (util/read-int)]
             (let [{:keys [done used-types]}
-                  (logic/handle-choice choice playable hand field enemy-field enemy-player-hp player-name used-types show-board deck n)]
+                  (logic/handle-choice choice playable hand field enemy-field player-hp enemy-player-hp player-name used-types show-board deck n)]
               (when-not done
                 (recur used-types)))
             (do
@@ -48,14 +48,12 @@
     (deck-managment/add-to-hand! hand drawn)))
 
 (defn player-turn
-  [player-name n deck hand field enemy-field
-   player-hp enemy-player-hp
-   can-attack? first-draw?]
+  [player-name n deck hand field enemy-field player-hp enemy-player-hp can-attack? first-draw?]
   (ui/print-player-turn player-name player-hp)
   (Thread/sleep 800)
   (draw-phase player-name n deck hand first-draw?)
   (Thread/sleep 400)
-  (selection-phase player-name hand field enemy-field enemy-player-hp n deck)
+  (selection-phase player-name hand field enemy-field player-hp enemy-player-hp n deck)
   (when can-attack?
     (attack-phase player-name field enemy-field enemy-player-hp)))
 
