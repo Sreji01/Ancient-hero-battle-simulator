@@ -28,9 +28,10 @@
   (swap! (:current-hp target) #(max 0 (- % damage)))
   (swap! target-player-hp #(max 0 (- % damage))))
 
-(defn attack! [attacker target target-player-hp enemy-field]
+(defn attack! [attacker target target-player-hp player-field enemy-field]
   (Thread/sleep 1500)
   (ui/print-attack-message attacker target)
+  (trap-logic/handle-player-attack-traps! player-field attacker)
   (trap-logic/handle-enemy-attack-traps! enemy-field attacker target)
   (let [outcome (calculate-hit? attacker target)
         damage  (if (= outcome :hit)
@@ -62,7 +63,7 @@
             target  (util/choose-hero targets
                                       (if (= player-name "BLUE") "Red" "Blue")
                                       "to attack")]
-        (attack! attacker target enemy-player-hp enemy-field)))))
+        (attack! attacker target enemy-player-hp  player-field enemy-field)))))
 
 (defn choose-attacker [input available-attackers]
   (nth available-attackers (dec input)))
