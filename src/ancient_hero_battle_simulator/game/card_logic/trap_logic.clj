@@ -9,6 +9,39 @@
   (let [input (str/lower-case (read-line))]
     (= input "y")))
 
+(defn apply-player-attack-trap!
+  [trap attacker]
+  (case (:type trap)
+    :buff
+    (let [{:keys [increase-health
+                  increase-power
+                  increase-defense
+                  increase-agility
+                  increase-intelligence]} (:effect trap)]
+      (when increase-health
+        (swap! (:current-hp attacker)
+               + increase-health))
+      (swap! (:current-stats attacker)
+             (fn [stats]
+               (-> stats
+                   (update :power + (or increase-power 0))
+                   (update :defense + (or increase-defense 0))
+                   (update :agility + (or increase-agility 0))
+                   (update :intelligence + (or increase-intelligence 0)))))
+
+      (println (format "\n[TRAP] %s empowers %s for this turn!\n"
+                       (:name trap) (:name attacker))))
+
+    (println "Unknown player-attack trap type.")))
+
+(defn handle-player-attack-traps!
+  [player-field attacker]
+  (let [traps (state/traps-with-trigger player-field :player-attack)]
+    (doseq [trap traps]
+      (when (confirm? (str "\nActivate trap: " (:name trap) "? (y/n)\n"))
+        (apply-player-attack-trap! trap attacker)
+        (state/remove-trap-from-field! player-field trap)))))
+
 (defn apply-enemy-action-trap!
   [trap attacker-field defender-field action-card player-hp hand deck player-name]
   (case (:type trap)

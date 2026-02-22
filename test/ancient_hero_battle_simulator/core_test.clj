@@ -405,3 +405,31 @@
         (with-redefs [read-line (fn [] "y")]
           (trap-logic/handle-enemy-attack-traps! enemy-field attacker target))
         (get @(:current-stats attacker) :reflect-attack) => true))
+
+(fact "Battle Frenzy increases all attacker stats by 10 for one turn"
+      (let [attacker    {:name          "Attacker10"
+                         :current-hp    (atom 100)
+                         :current-stats (atom {:power 10
+                                               :defense 5
+                                               :agility 7
+                                               :intelligence 3})}
+            trap        {:id       316
+                         :name     "Battle Frenzy"
+                         :category :trap
+                         :type     :buff
+                         :trigger  :player-attack
+                         :effect   {:increase-health 10
+                                    :increase-power 10
+                                    :increase-defense 10
+                                    :increase-agility 10
+                                    :increase-intelligence 10}}
+            player-field (atom [{:action trap}])]
+
+        (with-redefs [read-line (fn [] "y")]
+          (trap-logic/handle-player-attack-traps! player-field attacker))
+
+        @(:current-hp attacker) => 110
+        (get @(:current-stats attacker) :power) => 20
+        (get @(:current-stats attacker) :defense) => 15
+        (get @(:current-stats attacker) :agility) => 17
+        (get @(:current-stats attacker) :intelligence) => 13))
