@@ -3,6 +3,7 @@
    [ancient-hero-battle-simulator.game.ui :as ui]
    [ancient-hero-battle-simulator.game.card-logic.action-logic :as action-logic]
    [ancient-hero-battle-simulator.game.card-logic.trap-logic :as trap-logic]
+   [ancient-hero-battle-simulator.game.card-logic.equipment-logic :as equipment-logic]
    [ancient-hero-battle-simulator.game.deck-menagment :as deck-managment]
    [ancient-hero-battle-simulator.game.game-state :as state]))
 
@@ -14,11 +15,10 @@
         (do
           (println (format "\n %s was negated!\n" (:name card)))
           false)
-        (action-logic/apply-action-effect!
-         card field enemy-field enemy-player-hp hand deck player-name)))
+        (action-logic/apply-action-effect! card field enemy-field enemy-player-hp hand deck player-name)))
 
     :equipment
-    (println "Equipment logic not yet implemented")
+    (equipment-logic/apply-equipment-effect! card field)
 
     (println "Unknown card category:" (:category card))))
 

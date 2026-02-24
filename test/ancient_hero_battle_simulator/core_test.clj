@@ -5,6 +5,7 @@
             [ancient-hero-battle-simulator.game.utilility :as util]
             [ancient-hero-battle-simulator.game.card-logic.action-logic :as action-logic]
             [ancient-hero-battle-simulator.game.card-logic.trap-logic :as trap-logic]
+            [ancient-hero-battle-simulator.game.card-logic.equipment-logic :as equipment-logic]
             [ancient-hero-battle-simulator.cards.actions :as card-actions]))
 
 (facts "Hero life state"
@@ -433,3 +434,95 @@
         (get @(:current-stats attacker) :defense) => 15
         (get @(:current-stats attacker) :agility) => 17
         (get @(:current-stats attacker) :intelligence) => 13))
+
+(fact "Sword of Might increases hero power by 10"
+  (let [hero  {:name "Hero1"
+               :current-stats (atom {:power 20})
+               :current-hp (atom 100)}
+        field (atom [{:hero hero}])
+        sword {:name "Sword of Might"
+               :category :equipment
+               :effect {:increase-power 10}}]
+
+    (equipment-logic/apply-equipment-effect! sword field)
+    (get @(:current-stats hero) :power) => 30))
+
+(fact "Shield of Fortitude increases hero defense by 10"
+  (let [hero  {:name "Hero2"
+               :current-stats (atom {:defense 15})
+               :current-hp (atom 100)}
+        field (atom [{:hero hero}])
+        shield {:name "Shield of Fortitude"
+                :category :equipment
+                :effect {:increase-defense 10}}]
+
+    (equipment-logic/apply-equipment-effect! shield field)
+    (get @(:current-stats hero) :defense) => 25))
+
+(fact "Boots of Swiftness increases hero agility by 10"
+  (let [hero  {:name "Hero3"
+               :current-stats (atom {:agility 12})
+               :current-hp (atom 100)}
+        field (atom [{:hero hero}])
+        boots {:name "Boots of Swiftness"
+               :category :equipment
+               :effect {:increase-agility 10}}]
+
+    (equipment-logic/apply-equipment-effect! boots field)
+    (get @(:current-stats hero) :agility) => 22))
+
+(fact "Helm of Wisdom increases hero intelligence by 10"
+  (let [hero  {:name "Hero4"
+               :current-stats (atom {:intelligence 8})
+               :current-hp (atom 100)}
+        field (atom [{:hero hero}])
+        helm {:name "Helm of Wisdom"
+              :category :equipment
+              :effect {:increase-intelligence 10}}]
+
+    (equipment-logic/apply-equipment-effect! helm field)
+    (get @(:current-stats hero) :intelligence) => 18))
+
+(fact "Banner of Heroes increases all hero stats by 5"
+  (let [hero {:name "Hero5"
+              :current-stats (atom {:power 10
+                                    :defense 10
+                                    :agility 10
+                                    :intelligence 10})
+              :current-hp (atom 100)}
+        field (atom [{:hero hero}])
+        banner {:name "Banner of Heroes"
+                :category :equipment
+                :effect {:increase-power 5
+                         :increase-defense 5
+                         :increase-agility 5
+                         :increase-intelligence 5}}]
+
+    (equipment-logic/apply-equipment-effect! banner field)
+
+    (get @(:current-stats hero) :power) => 15
+    (get @(:current-stats hero) :defense) => 15
+    (get @(:current-stats hero) :agility) => 15
+    (get @(:current-stats hero) :intelligence) => 15))
+
+(fact "Standard of the Legion increases all hero stats by 2.5"
+  (let [hero {:name "Hero6"
+              :current-stats (atom {:power 10
+                                    :defense 10
+                                    :agility 10
+                                    :intelligence 10})
+              :current-hp (atom 100)}
+        field (atom [{:hero hero}])
+        standard {:name "Standard of the Legion"
+                  :category :equipment
+                  :effect {:increase-power 2.5
+                           :increase-defense 2.5
+                           :increase-agility 2.5
+                           :increase-intelligence 2.5}}]
+
+    (equipment-logic/apply-equipment-effect! standard field)
+
+    (get @(:current-stats hero) :power) => 12.5
+    (get @(:current-stats hero) :defense) => 12.5
+    (get @(:current-stats hero) :agility) => 12.5
+    (get @(:current-stats hero) :intelligence) => 12.5))

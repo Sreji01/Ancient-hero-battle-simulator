@@ -30,20 +30,12 @@
     :effect {:increase-intelligence 10}
     :description "A crown of insight that increases a hero's intelligence by 10."}
 
-   {:id 405
-    :name "Armor of Vitality"
-    :category :equipment
-    :tier :a
-    :effect {:increase-health 10}
-    :description "Reinforced plate that increases a hero's health by 10."}
-
    {:id 406
     :name "Banner of Heroes"
     :category :equipment
     :tier :a
     :effect {:increase-power 5
              :increase-defense 5
-             :increase-health 5
              :increase-agility 5
              :increase-intelligence 5}
     :description "A legendary standard that increases all of a hero's stats by 5."}
@@ -77,20 +69,12 @@
     :effect {:increase-intelligence 5}
     :description "A simple circlet that increases a hero's intelligence by 5."}
 
-   {:id 411
-    :name "Cuirass of the Guard"
-    :category :equipment
-    :tier :b
-    :effect {:increase-health 5}
-    :description "Protective armor that increases a hero's health by 5."}
-
    {:id 412
     :name "Standard of the Legion"
     :category :equipment
     :tier :b
     :effect {:increase-power 2.5
              :increase-defense 2.5
-             :increase-health 2.5
              :increase-agility 2.5
              :increase-intelligence 2.5}
     :description "A battle standard that increases all of a hero's stats by 2.5."}])
