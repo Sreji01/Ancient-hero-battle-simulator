@@ -19,7 +19,7 @@
 
 (defn selection-phase
   [player-name hand field enemy-field player-hp enemy-player-hp n deck]
-  (ui/show-selection-header player-name)
+  (println (str "\n--- " player-name " SELECTION PHASE ---\n"))
   (Thread/sleep 800)
   (trap-logic/apply-dot-effects! field)
   (Thread/sleep 600)
@@ -44,7 +44,7 @@
   (let [drawn (deck-managment/draw-cards deck n first-draw?)]
     (doseq [card drawn]
       (Thread/sleep 500)
-      (ui/show-draw player-name card))
+      (println (str player-name " draws: " (:name card))))
     (deck-managment/add-to-hand! hand drawn)))
 
 (defn player-turn

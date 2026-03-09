@@ -2,15 +2,12 @@
   (:gen-class)
   (:require [clojure.string :as str]))
 
-(defn print-attack-message [attacker target] 
-  (println (str (:name attacker) " attacks " (:name target) "!\n")))
-
 (defn print-outcome [attacker target outcome damage]
   (case outcome
     :dodge-roll (println (str (:name target) " dodged with Dodge Roll!"))
     :dodge      (println (str (:name target) " dodged the attack!"))
     :hit        (when (> damage 0)
-                  (println (str (:name attacker) " deals " damage " damage to " (:name target) "!")))))
+                  (println (str "\n" (:name attacker) " deals " damage " damage to " (:name target) "!")))))
 
 (defn announce-random-picks [blue-picks red-picks type]
   (println (format "\n--- Randomly assigning %s ---" type))
@@ -122,23 +119,14 @@
    (if (= player-name "BLUE") enemy-field field)
    n))
 
-(defn show-draw [player-name card]
-  (println (str player-name " draws: " (:name card))))
-
 (defn print-card-play [player-name card msg]
-  (println (format "\n%s %s: %s\n" player-name msg (card-display-name card))))
-
-(defn print-player-hp [player-name hp]
-  (println (format "%s PLAYER HEALTH: %d HP" player-name @hp)))
+  (println (format "\n%s %s: %s" player-name msg (card-display-name card))))
 
 (defn print-player-turn [player-name player-hp]
   (println "\n==============================")
   (println (str ">>> " player-name " PLAYER TURN <<<"))
   (println "==============================")
-  (print-player-hp player-name player-hp))
-
-(defn show-selection-header [player-name]
-  (println (str "\n--- " player-name " SELECTION PHASE ---\n")))
+  (println (format "%s PLAYER HEALTH: %d HP" player-name @player-hp)))
 
 (defn print-attackers [available-attackers]
   (println "\nSelect a hero to attack:")

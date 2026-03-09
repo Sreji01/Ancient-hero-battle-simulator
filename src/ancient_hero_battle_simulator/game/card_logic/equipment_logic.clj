@@ -27,7 +27,7 @@
             updated (update target :equipment (fnil conj []) card)]
         (state/update-hero-on-field! field updated)
         (apply-equipment-to-hero! updated (:effect card))
-        (println (format "\n%s equips %s!" (:name target) (:name card)))
+        (println (format "\n%s equips %s!\n" (:name target) (:name card)))
         true)
       (do
         (println "\nNo heroes to equip!\n")

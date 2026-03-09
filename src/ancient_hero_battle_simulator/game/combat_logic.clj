@@ -30,7 +30,7 @@
 
 (defn attack! [attacker target target-player-hp player-field enemy-field]
   (Thread/sleep 1500)
-  (ui/print-attack-message attacker target)
+  (println (str "\n" (:name attacker) " attacks " (:name target) "!\n"))
   (trap-logic/handle-player-attack-traps! player-field attacker)
   (trap-logic/handle-enemy-attack-traps! enemy-field attacker target)
   (let [outcome (calculate-hit? attacker target)

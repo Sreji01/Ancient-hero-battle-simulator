@@ -13,7 +13,7 @@
     (let [trap-result (trap-logic/handle-enemy-action-traps! enemy-field field card player-hp hand deck player-name)]
       (if (= trap-result :negated)
         (do
-          (println (format "\n %s was negated!\n" (:name card)))
+          (println (format "%s was negated!" (:name card)))
           false)
         (action-logic/apply-action-effect! card field enemy-field enemy-player-hp hand deck player-name)))
 
