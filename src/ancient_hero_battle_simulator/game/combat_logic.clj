@@ -41,8 +41,7 @@
       (swap! (:current-stats target) dissoc :evade))
 
     (when (= outcome :hit)
-      (apply-damage! target target-player-hp damage)
-      (state/check-and-remove-dead! target enemy-field)
+      (apply-damage! target target-player-hp damage) 
 
       (let [stats-atom (:current-stats target)]
         (when (> (:damage-reduction @stats-atom 0) 0)
@@ -50,7 +49,8 @@
     (Thread/sleep 1500)
     (ui/print-outcome attacker target outcome damage)
     (Thread/sleep 1000)
-    (println (str target-player-name " PLAYER HEALTH: " @target-player-hp) " HP\n") 
+    (state/check-and-remove-dead! target enemy-field) (Thread/sleep 1000)
+    (println (str target-player-name " PLAYER HEALTH: " @target-player-hp) "HP\n") 
     (Thread/sleep 1000)
     (ui/display-board player-field enemy-field n)))
 

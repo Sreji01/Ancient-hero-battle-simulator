@@ -27,9 +27,6 @@
 (defn show-main-menu []
   (println "\nMain Menu\n1. Fight!\n2. Create your hero\n3. Exit"))
 
-(defn show-mode-menu []
-  (println "\nSelect Mode:\n1. Singleplayer (PvE)\n2. Multiplayer (PvP)\n3. Back to main menu"))
-
 (defn show-combat-menu []
   (println "\nSelect combat type\n1. 1v1\n2. 2v2\n3. 3v3\n4. 4v4\n5. Back to main menu"))
 

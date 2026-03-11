@@ -57,18 +57,8 @@
           (do (println "\nCard not found.") (recur)))
         (do (println "\nInvalid input.") (recur))))))
 
-(defn random-computer-pick [selected-in-cat cards type]
-  (let [available (remove #(contains? @selected-in-cat (:id %)) cards)
-        picked (rand-nth available)]
-    (println (format "\nComputer (Red Player) is picking %s...\n" type))
-    (Thread/sleep 2000)
-    (swap! selected-in-cat conj (:id picked))
-    (println (str (:name picked) " selected!"))
-    (Thread/sleep 1000)
-    picked))
-
 (defn draft-category
-  [mode count cards type selected-in-cat]
+  [count cards type selected-in-cat]
   (reset! selected-in-cat #{})
   (loop [n 1
          blue-picks []
@@ -86,9 +76,7 @@
                :red))
 
       (= turn :red)
-      (let [pick (if (= mode "1")
-                   (random-computer-pick selected-in-cat cards type)
-                   (select-card "Red Player" n selected-in-cat cards type))]
+      (let [pick (select-card "Red Player" n selected-in-cat cards type)]
         (recur (inc n)
                blue-picks
                (conj red-picks pick)
@@ -98,18 +86,18 @@
   (let [shuffled (shuffle cards)]
     [(vec (take count shuffled)) (vec (take count (drop count shuffled)))]))
 
-(defn pick-category [method mode count cards type selected]
+(defn pick-category [method count cards type selected]
   (if (= method "draft")
-    (draft-category mode count cards type selected)
+    (draft-category count cards type selected)
     (let [[blue red] (random-all-picks count cards)]
       (ui/announce-random-picks blue red type)
       [blue red])))
 
-(defn pick-all-cards [method mode counts selected]
-  {:heroes    (pick-category method mode (:heroes counts) heroes/heroes "Hero Cards" selected)
-   :actions   (pick-category method mode (:actions counts) actions/actions "Action Cards" selected)
-   :traps     (pick-category method mode (:traps counts) traps/traps "Trap Cards" selected)
-   :equipment (pick-category method mode (:equipment counts) equipment/equipment "Equipment Cards" selected)})
+(defn pick-all-cards [method counts selected]
+  {:heroes    (pick-category method (:heroes counts) heroes/heroes "Hero Cards" selected)
+   :actions   (pick-category method (:actions counts) actions/actions "Action Cards" selected)
+   :traps     (pick-category method (:traps counts) traps/traps "Trap Cards" selected)
+   :equipment (pick-category method (:equipment counts) equipment/equipment "Equipment Cards" selected)})
 
 (defn card-counts [n]
   {:heroes    (* n 2)
@@ -117,9 +105,9 @@
    :traps     (+ 2 n)
    :equipment n})
 
-(defn prepare-cards [method mode n selected]
+(defn prepare-cards [method n selected]
   (let [counts (card-counts n)
-        {:keys [heroes actions traps equipment]} (pick-all-cards method mode counts selected)]
+        {:keys [heroes actions traps equipment]} (pick-all-cards method counts selected)]
     {:blue (state/init-team {:heroes (first heroes)
                              :actions (first actions)
                              :traps (first traps)

@@ -70,20 +70,16 @@
   (let [{:keys [blue red n]} game-state]
     (player-turn "BLUE" n (:deck blue) (:hand blue) (:field blue) (:field red)
                  (:hp blue) (:hp red) true false)
-
     (player-turn "RED" n (:deck red) (:hand red) (:field red) (:field blue)
                  (:hp red) (:hp blue) true false)
-
     (end-round! game-state)))
 
 (defn first-round [game-state]
   (let [{:keys [blue red n]} game-state]
     (player-turn "BLUE" n (:deck blue) (:hand blue) (:field blue) (:field red)
                  (:hp blue) (:hp red) false true)
-
     (player-turn "RED" n (:deck red) (:hand red) (:field red) (:field blue)
                  (:hp red) (:hp blue) true true)
-
     (end-round! game-state)))
 
 (defn game-loop [game-state]
@@ -110,44 +106,33 @@
       "3" (do (println "Returning to main menu...") :back)
       (do (println "Invalid choice") (recur)))))
 
-(defn select-nvn [mode n]
+(defn select-nvn [n]
   (let [method (select-method)]
     (if (= method :back)
       :back
       (let [selected (atom #{})
-            cards (deck-managment/prepare-cards method mode n selected)]
+            cards (deck-managment/prepare-cards method n selected)]
         (ui/announce-battle n)
         (Thread/sleep 1000)
         (fight-cards (:blue cards) (:red cards) n)))))
 
-(defn select-combat [mode]
+(defn select-combat []
   (loop []
     (ui/show-combat-menu)
     (case (read-line)
-      "1" (if (= (select-nvn mode 1) :back) nil (recur))
-      "2" (if (= (select-nvn mode 2) :back) nil (recur))
-      "3" (if (= (select-nvn mode 3) :back) nil (recur))
-      "4" (if (= (select-nvn mode 4) :back) nil (recur))
+      "1" (if (= (select-nvn 1) :back) nil (recur))
+      "2" (if (= (select-nvn 2) :back) nil (recur))
+      "3" (if (= (select-nvn 3) :back) nil (recur))
+      "4" (if (= (select-nvn 4) :back) nil (recur))
       "5" (println "Returning to main menu...")
       (do (println "Invalid choice") (recur)))))
-
-(defn select-mode []
-  (loop []
-    (ui/show-mode-menu)
-    (case (read-line)
-      "1" (do (println "\nPvE selected!") "1")
-      "2" (do (println "\nPvP selected!") "2")
-      "3" (do (println "Returning to main menu...") :back)
-      (do (println "\nInvalid choice") (recur)))))
 
 (defn start-game []
   (loop []
     (ui/show-main-menu)
     (case (read-line)
       "1" (do
-            (let [mode (select-mode)]
-              (when-not (= mode :back)
-                (select-combat mode)))
+            (select-combat)
             (recur))
       "2" (do (println "Create your hero...") (recur))
       "3" (println "Bye!")

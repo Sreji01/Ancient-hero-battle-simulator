@@ -161,7 +161,7 @@
 
 (defn check-and-remove-dead! [target field]
   (when (dead? target)
-    (println (format "\n%s has been defeated!" (:name target)))
+    (println (format "%s has been defeated!\n" (:name target)))
     (doseq [eq (:equipment target)]
       (remove-card-from-field! field :action eq))
     (remove-hero-from-field! field target)))
