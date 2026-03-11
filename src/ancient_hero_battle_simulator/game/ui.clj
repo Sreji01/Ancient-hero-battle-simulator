@@ -7,7 +7,7 @@
     :dodge-roll (println (str (:name target) " dodged with Dodge Roll!"))
     :dodge      (println (str (:name target) " dodged the attack!"))
     :hit        (when (> damage 0)
-                  (println (str "\n" (:name attacker) " deals " damage " damage to " (:name target) "!")))))
+                  (println (str "\n" (:name attacker) " deals " damage " damage to " (:name target) "!\n")))))
 
 (defn announce-random-picks [blue-picks red-picks type]
   (println (format "\n--- Randomly assigning %s ---" type))
@@ -120,7 +120,7 @@
    n))
 
 (defn print-card-play [player-name card msg]
-  (println (format "\n%s %s: %s" player-name msg (card-display-name card))))
+  (println (format "\n%s %s: %s\n" player-name msg (card-display-name card))))
 
 (defn print-player-turn [player-name player-hp]
   (println "\n==============================")

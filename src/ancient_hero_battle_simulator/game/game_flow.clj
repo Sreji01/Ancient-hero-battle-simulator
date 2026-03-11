@@ -8,14 +8,15 @@
    [ancient-hero-battle-simulator.game.game-state :as state]
    [ancient-hero-battle-simulator.game.utilility :as util]))
 
-(defn attack-phase [player-name field enemy-field enemy-player-hp]
+(defn attack-phase [player-name field enemy-field enemy-player-hp n]
   (println (str "\n--- " player-name " ATTACK PHASE ---"))
   (Thread/sleep 800)
   (combat-logic/attack-phase-loop player-name
-                     (state/heroes-on-field @field)
-                     field
-                     enemy-field
-                     enemy-player-hp))
+                                  (state/heroes-on-field @field)
+                                  field
+                                  enemy-field
+                                  enemy-player-hp
+                                  n))
 
 (defn selection-phase
   [player-name hand field enemy-field player-hp enemy-player-hp n deck]
@@ -55,7 +56,7 @@
   (Thread/sleep 400)
   (selection-phase player-name hand field enemy-field player-hp enemy-player-hp n deck)
   (when can-attack?
-    (attack-phase player-name field enemy-field enemy-player-hp)))
+    (attack-phase player-name field enemy-field enemy-player-hp n)))
 
 (defn end-round! [game-state]
   (let [{:keys [blue red]} game-state]

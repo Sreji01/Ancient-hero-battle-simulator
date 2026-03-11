@@ -28,9 +28,9 @@
   (swap! (:current-hp target) #(max 0 (- % damage)))
   (swap! target-player-hp #(max 0 (- % damage))))
 
-(defn attack! [attacker target target-player-hp player-field enemy-field]
+(defn attack! [attacker target target-player-name target-player-hp player-field enemy-field n]
   (Thread/sleep 1500)
-  (println (str "\n" (:name attacker) " attacks " (:name target) "!\n"))
+  (println (str "\n" (:name attacker) " attacks " (:name target) "!"))
   (trap-logic/handle-player-attack-traps! player-field attacker)
   (trap-logic/handle-enemy-attack-traps! enemy-field attacker target)
   (let [outcome (calculate-hit? attacker target)
@@ -48,9 +48,13 @@
         (when (> (:damage-reduction @stats-atom 0) 0)
           (swap! stats-atom assoc :damage-reduction 0))))
     (Thread/sleep 1500)
-    (ui/print-outcome attacker target outcome damage)))
+    (ui/print-outcome attacker target outcome damage)
+    (Thread/sleep 1000)
+    (println (str target-player-name " PLAYER HEALTH: " @target-player-hp) " HP\n") 
+    (Thread/sleep 1000)
+    (ui/display-board player-field enemy-field n)))
 
-(defn perform-attack [player-name attacker player-field enemy-field enemy-player-hp]
+(defn perform-attack [player-name attacker player-field enemy-field enemy-player-hp n]
   (if (:stunned? attacker)
     (do
       (println (str "\n" (:name attacker) " is stunned and cannot attack this turn!"))
@@ -63,7 +67,8 @@
             target  (util/choose-hero targets
                                       (if (= player-name "BLUE") "Red" "Blue")
                                       "to attack")]
-        (attack! attacker target enemy-player-hp  player-field enemy-field)))))
+        (attack! attacker target 
+                 (if (= player-name "BLUE") "RED" "BLUE") enemy-player-hp player-field enemy-field n)))))
 
 (defn choose-attacker [input available-attackers]
   (nth available-attackers (dec input)))
@@ -77,7 +82,7 @@
        (<= input (inc (count available-attackers)))))
 
 (defn attack-phase-loop
-  [player-name available-attackers field enemy-field enemy-player-hp]
+  [player-name available-attackers field enemy-field enemy-player-hp n]  ;; <-- n dodato
   (when (seq available-attackers)
     (let [defenders (state/heroes-on-field @enemy-field)]
       (if (empty? defenders)
@@ -88,14 +93,14 @@
             (cond
               (not (valid-attacker-choice? input available-attackers))
               (do (println "Invalid input.")
-                  (recur player-name available-attackers field enemy-field enemy-player-hp))
+                  (recur player-name available-attackers field enemy-field enemy-player-hp n))
 
               (end-attack-phase? input available-attackers)
               (println "\nEnding attack phase...")
 
               :else
               (let [attacker (choose-attacker input available-attackers)]
-                (perform-attack player-name attacker field enemy-field enemy-player-hp)
+                (perform-attack player-name attacker field enemy-field enemy-player-hp n)
                 (recur player-name
                        (vec (remove #(= (:id %) (:id attacker)) available-attackers))
-                       field enemy-field enemy-player-hp)))))))))
+                       field enemy-field enemy-player-hp n))))))))) 
