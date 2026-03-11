@@ -59,7 +59,7 @@
     :hero      {:key :hero :finder first-empty-hero-slot-index :msg "plays" :err "No empty hero slots!\n"}
     :action    {:key :action :finder first-empty-action-slot-index :msg "plays" :err "No empty action slots!\n"}
     :trap      {:key :action :finder first-empty-action-slot-index :msg "places" :err "No empty trap slots!"}
-    :equipment {:key :action :finder first-empty-action-slot-index :msg "equips" :err "No empty equipment slots!"}))
+    :equipment {:key :action :finder first-empty-action-slot-index :msg "plays" :err "No empty equipment slots!"}))
 
 (defn clear-action-slots! [field]
   (swap! field
