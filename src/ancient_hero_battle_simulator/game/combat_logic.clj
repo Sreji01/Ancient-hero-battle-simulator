@@ -96,7 +96,7 @@
                   (recur player-name available-attackers field enemy-field enemy-player-hp n))
 
               (end-attack-phase? input available-attackers)
-              (println "\nEnding attack phase...")
+              (println "Ending attack phase...")
 
               :else
               (let [attacker (choose-attacker input available-attackers)]

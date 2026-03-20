@@ -138,4 +138,4 @@
   (println "\nSelect a hero to attack:")
   (doseq [[idx hero] (map-indexed vector available-attackers)]
     (println (str (inc idx) ". " (:name hero) " " @(:current-hp hero) " HP")))
-  (println (str (inc (count available-attackers)) ". End Attack Phase")))
+  (println (str (inc (count available-attackers)) ". End Attack Phase\n")))

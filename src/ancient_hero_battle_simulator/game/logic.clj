@@ -13,8 +13,8 @@
     (let [trap-result (trap-logic/handle-enemy-action-traps! enemy-field field card player-hp hand deck player-name)]
       (if (= trap-result :negated)
         (do
-          (println (format "%s was negated!" (:name card)))
-          false)
+          (println (format "\n%s was negated!\n" (:name card)))
+          :negated)
         (action-logic/apply-action-effect! card field enemy-field enemy-player-hp hand deck player-name)))
 
     :equipment
@@ -51,8 +51,16 @@
 
       :else
       (let [effect-result (apply-effect card hand field enemy-field player-hp enemy-player-hp deck player-name)]
-        (if (false? effect-result)
+        (cond
+          (= effect-result :negated)
+          (do
+            (deck-managment/remove-card-from-hand! hand card)
+            {:success true :negated true :category (:category card)})
+
+          (false? effect-result)
           {:success false :err "\nCard effect failed!\n"}
+
+          :else
           (do
             (deck-managment/remove-card-from-hand! hand card)
             (let [card-to-place (if (map? effect-result) effect-result card)]

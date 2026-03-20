@@ -177,7 +177,8 @@
       (let [dmg (:player-damage effect)]
         (swap! enemy-player-hp #(max 0 (- % dmg)))
         (println (format "[DIRECT] %s deals %d damage to the enemy player!\n"
-                         (:name card) dmg))))))
+                         (:name card) dmg))
+        (println (format "Enemy player HP: %d\n" @enemy-player-hp))))))
 
 (defn apply-action-effect! [card field enemy-field enemy-player-hp hand deck player-name]
   (case (:type card)

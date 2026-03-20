@@ -38,7 +38,7 @@
   [player-field attacker]
   (let [traps (state/traps-with-trigger player-field :player-attack)]
     (doseq [trap traps]
-      (when (confirm? (str "\nActivate trap: " (:name trap) "? (y/n)\n"))
+      (when (confirm? (str "\nActivate trap: " (:name trap) "? (y/n)"))
         (apply-player-attack-trap! trap attacker)
         (state/remove-trap-from-field! player-field trap)))))
 
@@ -57,16 +57,13 @@
       (when copy-action
         (println (format "\n[TRAP] %s copies action %s and plays it back!\n"
                          (:name trap) (:name action-card)))
-        (action-logic/apply-action-effect! 
-         action-card defender-field attacker-field player-hp hand deck player-name
-         (:player-hp attacker-field)
-         nil
-         "TRAP")))
+        (action-logic/apply-action-effect!
+         action-card defender-field attacker-field player-hp hand deck player-name)))
 
     :control
     (let [{:keys [negate-action]} (:effect trap)]
       (when negate-action
-        (println (format "\n[TRAP] %s negates the action %s!\n"
+        (println (format "\n[TRAP] %s negates the action %s!"
                          (:name trap) (:name action-card)))
         :negated))
 
@@ -77,7 +74,7 @@
   (let [traps (state/traps-with-trigger defender-field :enemy-action)]
     (reduce
      (fn [result trap]
-       (if (confirm? (str "\nActivate trap: " (:name trap) "? (y/n)\n"))
+       (if (confirm? (str "Activate trap: " (:name trap) "? (y/n)\n"))
          (let [res (apply-enemy-action-trap!
                     trap attacker-field defender-field action-card player-hp hand deck player-name)]
            (state/remove-trap-from-field! defender-field trap)
@@ -132,7 +129,7 @@
     :reflect
     (let [{:keys [reflect-damage]} (:effect trap)]
       (swap! (:current-hp attacker) #(max 0 (- % reflect-damage)))
-      (println (format "\n[TRAP] %s reflects %d damage to attacker %s\n"
+      (println (format "\n[TRAP] %s reflects %d damage to attacker %s"
                        (:name trap) reflect-damage (:name attacker))))
 
     :utility
