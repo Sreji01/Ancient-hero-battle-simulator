@@ -1,5 +1,16 @@
 (ns ancient-hero-battle-simulator.game.game-state)
 
+(def equipment-icons ["⚔" "🛡" "🏹" "🗡" "⚡" "🔱" "🪖" "🔥"])
+
+(def used-icons (atom #{}))
+
+(defn pick-random-icon! []
+  (let [available (remove @used-icons equipment-icons)]
+    (when (seq available)
+      (let [icon (rand-nth available)]
+        (swap! used-icons conj icon)
+        icon))))
+
 (defn alive? [hero]
   (pos? @(:current-hp hero)))
 

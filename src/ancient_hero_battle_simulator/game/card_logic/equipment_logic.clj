@@ -23,12 +23,14 @@
 (defn apply-equipment-effect! [card field]
   (let [heroes (state/heroes-on-field @field)]
     (if (seq heroes)
-      (let [target (util/choose-hero heroes "Your Hero" "to equip")
-            updated (update target :equipment (fnil conj []) card)]
+      (let [target         (util/choose-hero heroes "Your Hero" "to equip")
+            icon           (or (state/pick-random-icon!) "⚙")
+            card-with-icon (assoc card :icon icon)
+            updated        (update target :equipment (fnil conj []) card-with-icon)]
         (state/update-hero-on-field! field updated)
         (apply-equipment-to-hero! updated (:effect card))
-        (println (format "\n%s equips %s!\n" (:name target) (:name card)))
-        true)
+        (println (format "\n%s equips %s! %s\n" (:name target) (:name card) icon))
+        card-with-icon)
       (do
         (println "\nNo heroes to equip!\n")
         false))))

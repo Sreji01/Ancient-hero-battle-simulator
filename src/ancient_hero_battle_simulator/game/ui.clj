@@ -60,10 +60,19 @@
 (defn print-card [card]
   (cond
     (and (:stats card) (:current-hp card))
-    (format "[%s %dHP]" (:name card) @(:current-hp card))
+    (if (seq (:equipment card))
+      (let [icons (map #(or (:icon %) "⚔") (:equipment card))
+            icons-str (str/join "" icons)]
+        (format "[%s %dHP %s]" (:name card) @(:current-hp card) icons-str))
+      (format "[%s %dHP]" (:name card) @(:current-hp card)))
 
     (:trigger card)
     "[TRAP]"
+
+    (= (:category card) :equipment)
+    (if (:icon card)
+      (format "[%s %s]" (:name card) (:icon card))
+      (format "[%s]" (:name card)))
 
     :else
     (format "[%s]" (:name card))))

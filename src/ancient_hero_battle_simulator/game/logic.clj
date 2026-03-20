@@ -55,7 +55,8 @@
           {:success false :err "\nCard effect failed!\n"}
           (do
             (deck-managment/remove-card-from-hand! hand card)
-            (state/place-card-on-field! card field (:key (state/get-slot-config (:category card))) idx)
+            (let [card-to-place (if (map? effect-result) effect-result card)]
+              (state/place-card-on-field! card-to-place field (:key (state/get-slot-config (:category card))) idx))
             {:success true
              :board-shown? (boolean (handle-board-and-traps card field enemy-field player-name n idx))}))))))
 

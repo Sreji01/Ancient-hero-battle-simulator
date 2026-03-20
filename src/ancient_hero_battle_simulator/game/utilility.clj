@@ -14,7 +14,7 @@
     (catch Exception _ nil)))
 
 (defn choose-hero [team team-name action-text]
-  (println (str "\nSelect a hero from " team-name " Team " action-text " (enter number):"))
+  (println (str "Select a hero from " team-name " Team " action-text " (enter number):"))
   (let [heroes (state/available-heroes team (atom #{}))]
     (loop []
       (ui/print-heroes heroes)
