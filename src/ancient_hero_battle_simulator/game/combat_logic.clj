@@ -32,32 +32,40 @@
   (Thread/sleep 1500)
   (println (str "\n" (:name attacker) " attacks " (:name target) "!"))
   (trap-logic/handle-player-attack-traps! player-field attacker)
-  (trap-logic/handle-enemy-attack-traps! enemy-field attacker target)
-  (let [outcome (calculate-hit? attacker target)
-        damage  (if (= outcome :hit)
-                  (compute-damage attacker target)
-                  0)]
-    (when (= outcome :dodge-roll)
+  (let [trap-result (trap-logic/handle-enemy-attack-traps! enemy-field attacker target)
+        reflected?  (= trap-result :reflected)
+        outcome     (if reflected? :hit (calculate-hit? attacker target))
+        damage      (if (= outcome :hit) (compute-damage attacker target) 0)]
+
+    (when reflected?
+      (println (format "\n[REFLECT] Attack reflected! %s takes %d damage!\n"
+                       (:name attacker) damage))
+      (swap! (:current-hp attacker) #(max 0 (- % damage)))
+      (state/check-and-remove-dead! attacker player-field))
+
+    (when (and (not reflected?) (= outcome :dodge-roll))
       (swap! (:current-stats target) dissoc :evade))
 
-    (when (= outcome :hit)
-      (apply-damage! target target-player-hp damage) 
-
+    (when (and (not reflected?) (= outcome :hit))
+      (apply-damage! target target-player-hp damage)
       (let [stats-atom (:current-stats target)]
         (when (> (:damage-reduction @stats-atom 0) 0)
           (swap! stats-atom assoc :damage-reduction 0))))
+
     (Thread/sleep 1500)
-    (ui/print-outcome attacker target outcome damage)
+    (when (not reflected?)
+      (ui/print-outcome attacker target outcome damage))
     (Thread/sleep 1000)
-    (state/check-and-remove-dead! target enemy-field) (Thread/sleep 1000)
-    (println (str target-player-name " PLAYER HEALTH: " @target-player-hp) "HP\n") 
+    (state/check-and-remove-dead! target enemy-field)
+    (Thread/sleep 1000)
+    (println (str target-player-name " PLAYER HEALTH: " @target-player-hp) "HP\n")
     (Thread/sleep 1000)
     (ui/display-board player-field enemy-field n)))
 
 (defn perform-attack [player-name attacker player-field enemy-field enemy-player-hp n]
   (if (:stunned? attacker)
     (do
-      (println (str "\n" (:name attacker) " is stunned and cannot attack this turn!"))
+      (println (str (:name attacker) " is stunned and cannot attack this turn!"))
       (state/update-hero-on-field! player-field (dissoc attacker :stunned? :stun-rounds)))
     (if (:skip-attack? attacker)
       (do
