@@ -141,32 +141,31 @@
     :control
     (let [{:keys [reflect-attack]} (:effect trap)]
       (when reflect-attack
-        (swap! (:current-stats attacker) assoc :reflect-attack true)
-        (println (format "\n[TRAP] %s will reflect next attack back to attacker %s\n"
-                         (:name trap) (:name attacker)))))
+        (println (format "\n[TRAP] %s will reflect next attack back to attacker %s"
+                         (:name trap) (:name attacker)))
+        :reflected))
 
     (println "Unknown trap type.")))
 
 (defn handle-enemy-attack-traps! [defender-field attacker target]
   (let [traps (state/traps-with-trigger defender-field :enemy-attack)]
-    (reduce (fn [activated? trap]
+    (reduce (fn [result trap]
               (if (confirm? (str "\nActivate trap: " (:name trap) "? (y/n)\n"))
-                (do
-                  (apply-enemy-attack-trap! trap attacker target)
+                (let [res (apply-enemy-attack-trap! trap attacker target)]
                   (state/remove-trap-from-field! defender-field trap)
-                  true)
-                activated?))
-            false
+                  (or result res))
+                result))
+            nil
             traps)))
 
 (defn apply-snare-trap!
   [card hero enemy-field]
   (let [turns (get-in card [:effect :stun])]
-    (swap! (:current-stats hero) assoc :stunned? true :stun-rounds turns)
     (state/remove-hero-from-field! enemy-field hero)
-    (state/place-hero-on-field! enemy-field hero)
-    (println (format "\n[TRAP] %s stuns %s for %d turn!\n"
-                     (:name card) (:name hero) turns))))
+    (let [stunned-hero (assoc hero :stunned? true :stun-rounds turns)]
+      (state/place-hero-on-field! enemy-field stunned-hero)
+      (println (format "\n[TRAP] %s stuns %s for %d turn!\n"
+                       (:name card) (:name hero) turns)))))
 
 (defn apply-trap-of-confusion!
   [card hero field enemy-field player-name]
