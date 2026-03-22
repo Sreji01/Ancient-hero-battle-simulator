@@ -36,7 +36,7 @@
               (when-not done
                 (recur used-types)))
             (do
-              (println "Invalid input.")
+              (println "\nInvalid input.\n")
               (recur used-types))))))))
 
 (defn draw-phase [player-name n deck hand first-draw?]

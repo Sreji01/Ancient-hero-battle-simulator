@@ -59,13 +59,10 @@
         (swap! (:current-stats target) update stat-key + amount)
         (println
          (format "\n[BUFF] %s increases %s's %s by %d for this turn! Current %s: %d\n"
-                 (:name card)
-                 (:name target)
-                 stat-label
-                 amount
-                 stat-label
+                 (:name card) (:name target) stat-label amount stat-label
                  (get @(:current-stats target) stat-key))))
-      (println "No heroes available to buff!"))))
+      (do (println "No heroes available to buff! Choose another card.")
+          false)))) 
 
 (defn apply-buff-effect! [card field]
   (let [effect (:effect card)]
@@ -101,14 +98,18 @@
           (heal-hero! target heal)
           (println (format "\n[HEAL] %s restores %d HP to %s!\n"
                            (:name card) heal (:name target))))
-        (println "No allies to heal!"))
+        (do (println "No allies to heal! Choose another card.")
+            false))
 
       (:restore-all-allies effect)
-      (let [heal (:restore-all-allies effect)]
-        (doseq [hero allies]
-          (heal-hero! hero heal))
-        (println (format "\n[AOE HEAL] %s restores %d HP to ALL allies!\n"
-                         (:name card) heal)))
+      (if (seq allies)
+        (let [heal (:restore-all-allies effect)]
+          (doseq [hero allies]
+            (heal-hero! hero heal))
+          (println (format "\n[AOE HEAL] %s restores %d HP to ALL allies!\n"
+                           (:name card) heal)))
+        (do (println "No allies to heal! Choose another card.")
+            false))
 
       :else
       (println "Unknown heal effect."))))
@@ -121,7 +122,8 @@
         (swap! (:current-stats target) update :damage-reduction (fnil + 0) reduction)
         (println (format "\n[DEFENSE] %s reduces damage taken by %s by %d for one turn!\n"
                          (:name card) (:name target) reduction)))
-      (println "No allies available for Last Stand!"))))
+      (do (println "No allies available! Choose another card.")
+          false)))) 
 
 (defn apply-dodge-roll! [card field]
   (let [allies (state/heroes-on-field @field)
@@ -131,15 +133,20 @@
         (swap! (:current-stats target) assoc :evade chance)
         (println (format "\n[DEFENSE] %s gives %s a %d%% chance to evade the next attack!\n"
                          (:name card) (:name target) chance)))
-      (println "No allies available for Dodge Roll!"))))
+      (do (println "No allies available! Choose another card.")
+          false)))) 
 
 (defn apply-shield-wall! [card field]
   (let [allies (state/heroes-on-field @field)
         reduction (:reduce-damage-all-enemies (:effect card))]
-    (doseq [hero allies]
-      (swap! (:current-stats hero) update :damage-reduction (fnil + 0) reduction))
-    (println (format "\n[DEFENSE] %s reduces damage taken by all allies by %d this turn!\n"
-                     (:name card) reduction))))
+    (if (seq allies)
+      (do
+        (doseq [hero allies]
+          (swap! (:current-stats hero) update :damage-reduction (fnil + 0) reduction))
+        (println (format "\n[DEFENSE] %s reduces damage taken by all allies by %d this turn!\n"
+                         (:name card) reduction)))
+      (do (println "No allies available! Choose another card.")
+          false)))) 
 
 (defn apply-defense-effect! [card field]
   (let [effect (:effect card)]
@@ -147,8 +154,7 @@
       (:reduce-damage-all-enemies effect) (apply-shield-wall! card field)
       (:evade effect)                     (apply-dodge-roll! card field)
       (:reduce-damage effect)             (apply-last-stand! card field)
-      :else (println "Unknown defense effect.")))
-  (println (format "Effect for type %s is not yet implemented." (:type card))))
+      :else (do (println "Unknown defense effect.") false))))
 
 (defn apply-damage-effect! [card enemy-field enemy-player-hp]
   (let [effect (:effect card)]
@@ -162,16 +168,21 @@
             (println (format "\n[DAMAGE] %s deals %d damage to %s!\n"
                              (:name card) dmg (:name target)))
             (state/check-and-remove-dead! target enemy-field))
-          (println "\nNo enemies to target! Effect wasted.")))
+          (do (println "No enemies to target! Choose another card.")
+              false)))
 
       (:damage-all-enemies effect)
       (let [defenders (state/heroes-on-field @enemy-field)
             dmg (:damage-all-enemies effect)]
-        (doseq [target defenders]
-          (swap! (:current-hp target) #(max 0 (- % dmg)))
-          (state/check-and-remove-dead! target enemy-field))
-        (println (format "[AOE] %s deals %d damage to ALL enemy heroes!\n"
-                         (:name card) dmg)))
+        (if (seq defenders)
+          (do
+            (doseq [target defenders]
+              (swap! (:current-hp target) #(max 0 (- % dmg)))
+              (state/check-and-remove-dead! target enemy-field))
+            (println (format "[AOE] %s deals %d damage to ALL enemy heroes!\n"
+                             (:name card) dmg)))
+          (do (println "No enemies to target! Choose another card.")
+              false)))
 
       (:player-damage effect)
       (let [dmg (:player-damage effect)]
