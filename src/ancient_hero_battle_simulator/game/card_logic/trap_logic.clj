@@ -50,7 +50,8 @@
     (let [{:keys [damage]} (:effect trap)]
       (swap! player-hp #(max 0 (- % damage)))
       (println (format "\n[TRAP] %s deals %d damage to enemy player!\n"
-                       (:name trap) damage)))
+                       (:name trap) damage))
+      (println (format "%s PLAYER HEALTH: %d HP\n" player-name @player-hp)))
 
     :reflect
     (let [{:keys [copy-action]} (:effect trap)]

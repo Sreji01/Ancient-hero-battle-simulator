@@ -64,7 +64,9 @@
     (state/clear-action-slots! (:field blue))
     (state/clear-action-slots! (:field red))
     (state/reset-current-stats! (:field blue))
-    (state/reset-current-stats! (:field red))))
+    (state/reset-current-stats! (:field red))
+    (state/reset-hp-to-max! (:field blue))
+    (state/reset-hp-to-max! (:field red))))
 
 (defn regular-round [game-state]
   (let [{:keys [blue red n]} game-state]

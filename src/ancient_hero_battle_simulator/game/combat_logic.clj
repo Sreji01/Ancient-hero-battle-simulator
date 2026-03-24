@@ -94,7 +94,7 @@
   (when (seq available-attackers)
     (let [defenders (state/heroes-on-field @enemy-field)]
       (if (empty? defenders)
-        (println "No enemies to attack!")
+        (println "\nNo enemies to attack!")
         (do
           (ui/print-attackers available-attackers)
           (let [input (util/read-int)]

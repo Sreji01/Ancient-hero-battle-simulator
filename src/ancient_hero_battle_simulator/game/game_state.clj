@@ -89,6 +89,11 @@
        (filter alive?)
        vec))
 
+(defn reset-hp-to-max! [field]
+  (doseq [hero (heroes-on-field @field)]
+    (let [max-hp (get-in hero [:stats :health])]
+      (swap! (:current-hp hero) #(min max-hp %)))))
+
 (defn reset-current-stats! [field]
   (doseq [hero (heroes-on-field @field)]
     (swap! (:current-stats hero) (constantly (:stats hero)))))

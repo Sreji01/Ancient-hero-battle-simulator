@@ -51,36 +51,45 @@
       (:draw effect)             (apply-draw-effect! card hand deck)
       (:take-control effect)     (apply-mind-control! card field enemy-field player-color))))
 
-(defn apply-single-buff!
+(defn apply-buff!
   [card field stat-key amount stat-label]
   (let [allies (state/heroes-on-field @field)]
     (if (seq allies)
-      (let [target (util/choose-hero allies "Your Hero" "to buff")]
-        (swap! (:current-stats target) update stat-key + amount)
+      (let [target (util/choose-hero allies "Your Hero" "to buff")
+            target-atom (if (= stat-key :health)
+                          (:current-hp target)
+                          (:current-stats target))]
+
+        (if (= stat-key :health)
+          (swap! target-atom + amount)
+          (swap! target-atom update stat-key + amount))
+
         (println
          (format "\n[BUFF] %s increases %s's %s by %d for this turn! Current %s: %d\n"
                  (:name card) (:name target) stat-label amount stat-label
-                 (get @(:current-stats target) stat-key))))
+                 (if (= stat-key :health)
+                   @target-atom
+                   (get @target-atom stat-key)))))
       (do (println "No heroes available to buff! Choose another card.")
-          false)))) 
+          false))))
 
 (defn apply-buff-effect! [card field]
   (let [effect (:effect card)]
     (cond
       (:increase-health effect)
-      (apply-single-buff! card field :health (:increase-health effect) "health")
+      (apply-buff! card field :health (:increase-health effect) "health")
 
       (:increase-defense effect)
-      (apply-single-buff! card field :defense (:increase-defense effect) "defense")
+      (apply-buff! card field :defense (:increase-defense effect) "defense")
 
       (:increase-power effect)
-      (apply-single-buff! card field :power (:increase-power effect) "power")
+      (apply-buff! card field :power (:increase-power effect) "power")
 
       (:increase-intelligence effect)
-      (apply-single-buff! card field :intelligence (:increase-intelligence effect) "intelligence")
+      (apply-buff! card field :intelligence (:increase-intelligence effect) "intelligence")
 
       (:increase-agility effect)
-      (apply-single-buff! card field :agility (:increase-agility effect) "agility"))))
+      (apply-buff! card field :agility (:increase-agility effect) "agility"))))
 
 (defn heal-hero! [hero amount]
   (let [max-hp (get-in hero [:stats :health])]

@@ -5,7 +5,7 @@
 (defn print-outcome [attacker target outcome damage]
   (case outcome
     :dodge-roll (println (str (:name target) " dodged with Dodge Roll!"))
-    :dodge      (println (str (:name target) " dodged the attack!"))
+    :dodge      (println (str "\n" (:name target) " dodged the attack!\n"))
     :hit        (when (> damage 0)
                   (println (str "\n" (:name attacker) " deals " damage " damage to " (:name target) "!\n")))))
 
